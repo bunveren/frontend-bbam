@@ -1,16 +1,22 @@
 import React from 'react';
-import { View, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity, Text } from 'react-native';
 import { RNMediapipe } from '@thinksys/react-native-mediapipe';
 import { Ionicons } from '@expo/vector-icons';
 import { evaluateForm } from '../../utils/ruleEngine';
+import { mapMediaPipeToInternal } from '../../utils/poseMath';
+import { feedbackProvider } from '../../utils/feedback';
 
-const PoseDetectionScreen = ({ navigation }) => {
+const PoseDetectionScreen = ({ navigation, route }) => {
+  const { exerciseType } = route.params || { exerciseType: 'Squat' }; 
   const [feedback, setFeedback] = useState("Align your body...");
 
   const handleLandmarks = (data) => {
     if (data && data.landmarks) {
-      const evaluation = evaluateForm(data.landmarks, 'Squat');
-      setFeedback(evaluation.message);
+      const internalLandmarks = mapMediaPipeToInternal(data.landmarks); 
+      const evaluation = evaluateForm(internalLandmarks, exerciseType);
+      const message = feedbackProvider.processFeedback(evaluation);
+      
+      setFeedback(message);
     }
   };
 
@@ -31,7 +37,6 @@ const PoseDetectionScreen = ({ navigation }) => {
         rightAnkle={true}
       />
 
-      {/* Standard Body & Beyond Overlay */}
       <View className="absolute top-12 left-6">
         <TouchableOpacity 
           onPress={() => navigation.goBack()}
