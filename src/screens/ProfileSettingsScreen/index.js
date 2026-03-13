@@ -104,7 +104,29 @@ const ProfileSettingsScreen = ({ navigation }) => {
     setHasUnsavedChanges(false);
   };
 
-  const validateInputs = () => true;
+  const validateInputs = () => {
+    const age = parseInt(ageInput);
+    const height = parseInt(heightInput);
+    const weight = parseInt(weightInput);
+
+    if (isNaN(age) || age < 10 || age >= 100) {
+      Alert.alert("Invalid Age", "Please enter a valid age (10-99)");
+      return false;
+    }
+    if (isNaN(height) || height < 50 || height > 250) {
+      Alert.alert("Invalid Height", "Please enter a valid height (50-250 cm)");
+      return false;
+    }
+    if (isNaN(weight) || weight < 20 || weight > 200) {
+      Alert.alert("Invalid Weight", "Please enter a valid weight (20-200 kg)");
+      return false;
+    }
+    if (!['male', 'female'].includes(genderInput)) {
+      Alert.alert("Invalid Gender", "Please select a gender.");
+      return false;
+    }
+    return true;
+  };
 
   const handleSaveChanges = async () => {
     if (!validateInputs()) return;
@@ -311,6 +333,7 @@ const ProfileSettingsScreen = ({ navigation }) => {
                         ? "bg-bbam-indigo-main"
                         : "bg-bbam-back-card"
                     }`}
+                    testID="gender-button-female"
                   >
                     <Text
                       className={`text-m3-body-large font-bold ${

@@ -203,6 +203,7 @@ const ReminderSection = ({
 
       {isPickerVisible && (
         <DateTimePicker
+          testID="reminder-datetime-picker"
           value={reminderTime}
           mode={pickerMode}
           display={pickerMode === 'date' ? 'calendar' : 'spinner'}

@@ -3,10 +3,15 @@ import { Alert } from 'react-native';
 
 jest.spyOn(Alert, 'alert');
 
-jest.mock('@expo/vector-icons', () => ({
-  Ionicons: 'Ionicons',
-  MaterialIcons: 'MaterialIcons',
-}), { virtual: true });
+jest.mock('@expo/vector-icons', () => {
+  const { View } = require('react-native');
+
+  return {
+    Ionicons: (props) => require('react').createElement(View, props),
+    MaterialCommunityIcons: (props) => require('react').createElement(View, props),
+    MaterialIcons: (props) => require('react').createElement(View, props),
+  };
+}, { virtual: true });
 
 jest.mock('@react-navigation/native', () => {
   const actualNav = jest.requireActual('@react-navigation/native');
@@ -32,3 +37,18 @@ jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper', () => ({
     addWhitelistedConfigKeys: () => {},
   },
 }), { virtual: true });
+
+jest.mock('expo-notifications', () => ({
+  cancelAllScheduledNotificationsAsync: jest.fn(),
+  scheduleNotificationAsync: jest.fn(),
+}));
+
+jest.mock('react-native-safe-area-context', () => {
+  const inset = { top: 0, right: 0, bottom: 0, left: 0 };
+  return {
+    SafeAreaProvider: ({ children }) => children,
+    SafeAreaView: ({ children }) => children,
+    useSafeAreaInsets: () => inset, // This stops the "No safe area value" error
+    useSafeAreaFrame: () => ({ x: 0, y: 0, width: 390, height: 844 }),
+  };
+});

@@ -49,9 +49,8 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
   };
 
   const scheduleLocalNotification = async () => {
-    if (!currentSchedule) return;
-
     await Notifications.cancelAllScheduledNotificationsAsync();
+    if (!currentSchedule) return;
 
     let trigger;
     if (currentSchedule.frequency === 'Daily') {
@@ -81,6 +80,12 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
   useEffect(() => {
     console.log(currentSchedule);
   }, [currentSchedule]);
+
+  useEffect(() => {
+    if (currentSchedule && isLocalAlarmScheduled) {
+      scheduleLocalNotification();
+    }
+  }, [currentSchedule, isLocalAlarmScheduled]);
 
   return (
     <View className="flex-1 bg-bbam-back-page" style={{ paddingTop: insets.top }}>
