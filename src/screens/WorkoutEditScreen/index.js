@@ -235,6 +235,14 @@ const WorkoutEditScreen = ({ route, navigation }) => {
             contentContainerStyle={{ paddingBottom: 10, backgroundColor: '#F8FAFC' }}
             activationDistance={20}
             showsVerticalScrollIndicator={true}
+            ListEmptyComponent={
+              <View className="flex-1 items-center justify-center py-8 bg-white/30 rounded-2xl border border-dashed border-bbam-text-light/30">
+                <Ionicons name="fitness-outline" size={48} color="#9DA3A9" className="mb-2" />
+                <Text className="text-m3-body-medium text-bbam-text-light text-center">
+                  Add an exercise to get started
+                </Text>
+              </View>
+            }
           />
         </View>
 
