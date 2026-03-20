@@ -1,13 +1,5 @@
 {
   "Squat": {
-    "mode": "reps",
-    "description": "Lower your hips as if sitting back into a chair, keeping your chest up and back straight.",
-    "repConfig": {
-      "primaryJoints": [24, 26, 28],
-      "startThreshold": 160,
-      "midThreshold": 90,
-      "type": "descending"
-    },
     "rules": [
         {
             "id": "S-01",
@@ -30,14 +22,6 @@
     ]
   },
   "Push-up": {
-    "mode": "reps",
-    "description": "Lower your body until your chest nearly touches the floor, keeping your elbows tucked and body straight.",
-    "repConfig": {
-      "primaryJoints": [11, 13, 15],
-      "startThreshold": 160,
-      "midThreshold": 70,
-      "type": "descending"
-    },
     "rules": [
         {
             "id": "P-01",
@@ -60,12 +44,6 @@
     ]
   },
   "Plank": {
-    "mode": "hold",
-    "description": "Maintain a push-up position with your body in a straight line to build core stability.",
-    "holdConfig": {
-      "targetSeconds": 60,
-      "primaryJoints": [12, 24, 28] 
-    },
     "rules": [
       {
         "id": "PL-01",
@@ -79,14 +57,6 @@
     ]
   },
   "Bicep-Curl": {
-    "mode": "reps",
-    "description": "Curl the weight toward your shoulder while keeping your upper arm stationary.",
-    "repConfig": {
-      "primaryJoints": [12, 14, 16],
-      "startThreshold": 160,
-      "midThreshold": 40,
-      "type": "descending"
-    },
     "rules": [
       {
         "id": "BC-01",
@@ -109,14 +79,6 @@
     ]
   },
   "Lunge": {
-    "mode": "reps",
-    "description": "Step forward and lower your hips until both knees are bent at a 90-degree angle, keeping your torso upright and front knee behind toes.",
-    "repConfig": {
-      "primaryJoints": [24, 26, 28],
-      "startThreshold": 170,
-      "midThreshold": 100,
-      "type": "descending"
-    },
     "rules": [
       {
         "id": "L-01",
@@ -139,14 +101,6 @@
     ]
   },
   "Jumping-Jack": {
-    "mode": "reps",
-    "description": "Jump while spreading your legs and clapping your hands overhead, then return to starting position.",
-    "repConfig": {
-      "primaryJoints": [11, 0, 12],
-      "startThreshold": 60,
-      "midThreshold": 150,
-      "type": "ascending"
-    },
     "rules": [
       {
         "id": "JJ-01",
@@ -160,14 +114,6 @@
     ]
   },
   "Shoulder-Press": {
-    "mode": "reps",
-    "description": "Push the weights directly overhead until your arms are fully extended, then lower them back to shoulder level while keeping your core engaged.",
-    "repConfig": {
-      "primaryJoints": [12, 14, 16],
-      "startThreshold": 80,
-      "midThreshold": 160,
-      "type": "ascending"
-    },
     "rules": [
       {
         "id": "SP-01",
@@ -181,14 +127,6 @@
     ]
   },
   "Glute-Bridge": {
-    "mode": "reps",
-    "description": "Lie on your back and lift your hips toward the ceiling by squeezing your glutes.",
-    "repConfig": {
-      "primaryJoints": [12, 24, 26], 
-      "startThreshold": 110, 
-      "midThreshold": 160,
-      "type": "ascending"
-    },
     "rules": [
       {
         "id": "GB-01",

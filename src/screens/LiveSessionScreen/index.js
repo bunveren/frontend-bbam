@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
 import { RNMediapipe } from '@thinksys/react-native-mediapipe';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,56 +9,14 @@ import { feedbackProvider } from '../../utils/feedback';
 const PoseDetectionScreen = ({ navigation, route }) => {
   const { exerciseType } = route.params || { exerciseType: 'Squat' }; 
   const [feedback, setFeedback] = useState("Align your body...");
-  const [reps, setReps] = useState(0);
-  const [isAtBottom, setIsAtBottom] = useState(false);
-  const [isActive, setIsActive] = useState(false);
 
   const handleLandmarks = (data) => {
     if (data && data.landmarks) {
-      const internalLandmarks = mapMediaPipeToInternal(data.landmarks);
-      const exerciseData = exerciseRules[exerciseType];
+      const internalLandmarks = mapMediaPipeToInternal(data.landmarks); 
       const evaluation = evaluateForm(internalLandmarks, exerciseType);
-      
-      if (evaluation.isCorrect) setIsActive(true);
-      const kneeAngle = evaluation.currentAngle;
-      if (exerciseData.mode === 'reps' && evaluation.isCorrect) {
-        const { primaryJoints, startThreshold, midThreshold, type } = exerciseData.repConfig;
-        const currentAngle = calculateAngle(
-          internalLandmarks[primaryJoints[0]], 
-          internalLandmarks[primaryJoints[1]], 
-          internalLandmarks[primaryJoints[2]]
-        );
-
-        if (type === 'descending') {
-          if (currentAngle < midThreshold && !isAtBottom) setIsAtBottom(true);
-          else if (currentAngle > startThreshold && isAtBottom) countRep();
-        } 
-        else if (type === 'ascending') {
-          if (currentAngle > midThreshold && !isAtBottom) setIsAtBottom(true);
-          else if (currentAngle < startThreshold && isAtBottom) countRep();
-        }
-      }
-      else if (exerciseData.mode === 'hold') {
-        if (evaluation.isCorrect) {
-          if (!timerRef.current) {
-            timerRef.current = setInterval(() => {
-              setSeconds(prev => prev + 1);
-            }, 1000);
-          }
-        } else {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
-        }
-      }
-
-      const countRep = () => {
-        setReps(prev => prev + 1);
-        setIsAtBottom(false);
-        feedbackProvider.triggerVoiceOutput(`${reps + 1}`);
-      };
-
       const message = feedbackProvider.processFeedback(evaluation);
-      setFeedback(`${message} | ${exerciseData.mode === 'reps' ? `Reps: ${reps}` : `Time: ${seconds}s`}`);
+      
+      setFeedback(message);
     }
   };
 
@@ -89,10 +47,7 @@ const PoseDetectionScreen = ({ navigation, route }) => {
       </View>
       
       <View className="absolute bottom-20 self-center bg-bbam-indigo-main/80 px-6 py-4 rounded-3xl">
-        <Text className="text-white font-bold text-center text-m3-headline-medium">
-          {reps}
-        </Text>
-        <Text className="text-white text-center text-m3-body-small">
+        <Text className="text-white font-bold text-center text-m3-body-large">
           {feedback}
         </Text>
       </View>
