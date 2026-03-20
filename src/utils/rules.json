@@ -222,6 +222,7 @@
   },
   "Side-Plank": {
     "mode": "hold",
+    "description": "Maintain a sided straight line to build core stability.",
     "holdConfig": { "primaryJoints": [12, 24, 28] },
     "rules": [
       {
@@ -231,6 +232,47 @@
         "minAngle": 170,
         "maxAngle": 190,
         "message": "Keep your hips high! Your body should be a straight diagonal."
+      }
+    ]
+  },
+  "Sit-up": {
+    "mode": "reps",
+    "description": "Lie on your back with knees bent, then lift your torso toward your knees while keeping your core engaged.",
+    "repConfig": {
+      "primaryJoints": [12, 24, 26],
+      "startThreshold": 150,
+      "midThreshold": 45,
+      "type": "descending"
+    },
+    "rules": [
+      {
+        "id": "SU-01",
+        "name": "Torso Range",
+        "joints": [12, 24, 26],
+        "minAngle": 40,
+        "maxAngle": 160,
+        "errorCondition": "angle < 40",
+        "message": "Don't over-flex! Keep the movement controlled."
+      }
+    ]
+  },
+  "Mountain Climber": {
+    "mode": "reps",
+    "description": "From a plank position, alternate bringing your knees toward your chest as if running in place.",
+    "repConfig": {
+      "primaryJoints": [24, 26, 28],
+      "startThreshold": 160,
+      "midThreshold": 80,
+      "type": "descending"
+    },
+    "rules": [
+      {
+        "id": "MC-01",
+        "name": "Knee Drive",
+        "joints": [24, 26, 28],
+        "minAngle": 70,
+        "maxAngle": 100,
+        "message": "Bring your knee closer to your chest for a full rep!"
       }
     ]
   }

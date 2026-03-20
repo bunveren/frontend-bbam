@@ -1,4 +1,4 @@
-import { calculateAngle } from './poseMath';
+import { calculateAngle, calculateAngle3D } from './poseMath';
 import exerciseRules from './rules.json';
 
 const getSideIds = (ids, targetSide) => ids.map(id => {
@@ -24,7 +24,7 @@ export const evaluateForm = (landmarks, exerciseType) => {
   if (Math.max(leftVis, rightVis) < 0.2 && Object.keys(landmarks).length > 5) return { message: "Body not fully visible", isCorrect: false, errorType: 'VISIBILITY' };
   
   const bestSide = rightVis >= leftVis ? 'right' : 'left';
-
+  //let errors = [];
   for (const rule of currentExercise.rules) {
     const hasLeft = rule.joints.some(id => id !== 0 && id % 2 !== 0);
     const hasRight = rule.joints.some(id => id !== 0 && id % 2 === 0);
@@ -36,7 +36,7 @@ export const evaluateForm = (landmarks, exerciseType) => {
     const p3 = landmarks[jointsToUse[2]];
     if (!p1 || !p2 || !p3) continue;
 
-    const angle = calculateAngle(p1, p2, p3);
+    const angle = calculateAngle3D(p1, p2, p3);
     const isMinError = rule.minAngle !== undefined && angle < (rule.minAngle-2);
     const isMaxError = rule.maxAngle !== undefined && angle > (rule.maxAngle+2);
     //Are you adjusting the seat really? That's been your fucking problem the whole time. The seat height. So now you have it, right?
@@ -46,6 +46,23 @@ export const evaluateForm = (landmarks, exerciseType) => {
       feedback.errorType = rule.id;
       break; 
     }
+
+    /* en oncelikli rule erroru kullaniciya vermemiz lazim
+      if (isMinError || isMaxError) {
+        errors.push({
+          id: rule.id,
+          priority: rule.priority || 5,
+          message: rule.message,
+          currentAngle: angle3D
+        });
+      }
+    }
+
+    if (errors.length > 0) {
+      const primaryError = errors.sort((a, b) => a.priority - b.priority)[0];
+      return { ...primaryError, isCorrect: false };
+    }
+    */
   }
 
   return feedback;
