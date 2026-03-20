@@ -222,6 +222,7 @@
   },
   "Side-Plank": {
     "mode": "hold",
+    "description": "Maintain a sided straight line to build core stability.",
     "holdConfig": { "primaryJoints": [12, 24, 28] },
     "rules": [
       {
