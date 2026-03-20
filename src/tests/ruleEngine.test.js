@@ -4,8 +4,9 @@ jest.mock('expo-speech', () => ({
 
 import { evaluateForm } from '../utils/ruleEngine';
 import { generateFullBodyMock, generatePoseFromRules } from '../utils/testUtils';
-import { calculateAngle, mapMediaPipeToInternal } from '../utils/poseMath';
+import { calculateAngle, calculateAngle3D, mapMediaPipeToInternal } from '../utils/poseMath';
 import { feedbackProvider } from '../utils/feedback';
+import exerciseRules from '../utils/rules.json'
 jest.mock('@thinksys/react-native-mediapipe', () => ({RNMediapipe: jest.fn()}));
 
 describe('Exercise Application - Unit Tests', () => {
@@ -311,4 +312,54 @@ describe('Exercise Rule Engine - Comprehensive Logic Tests', () => {
     expect(result.isCorrect).toBe(true);
   });
 
+});
+
+describe('Advanced Logic Tests', () => {
+  
+  test('Calibration: Should identify valid T-Pose based on 160° threshold', () => {
+    const tPoseLandmarks = {
+      11: { x: 0.3, y: 0.3, z: 0, visibility: 1 }, 13: { x: 0.2, y: 0.3, z: 0, visibility: 1 }, 15: { x: 0.1, y: 0.3, z: 0, visibility: 1 },
+      12: { x: 0.7, y: 0.3, z: 0, visibility: 1 }, 14: { x: 0.8, y: 0.3, z: 0, visibility: 1 }, 16: { x: 0.9, y: 0.3, z: 0, visibility: 1 },
+      24: { x: 0.5, y: 0.8, z: 0, visibility: 1 }
+    };
+
+    const leftArm = calculateAngle3D(tPoseLandmarks[11], tPoseLandmarks[13], tPoseLandmarks[15]);
+    const rightArm = calculateAngle3D(tPoseLandmarks[12], tPoseLandmarks[14], tPoseLandmarks[16]);
+    const isUpright = tPoseLandmarks[12].y < tPoseLandmarks[24].y;
+
+    expect(leftArm).toBeGreaterThan(160);
+    expect(rightArm).toBeGreaterThan(160);
+    expect(isUpright).toBe(true);
+  });
+
+  test('Counter: Should follow the 0 -> 1 -> 2 -> 1 state cycle for Squat', () => {
+    const config = exerciseRules['Squat'].repConfig;
+    let motionState = 0;
+    let reps = 0;
+
+    const sequence = [170, 150, 80, 170];
+
+    sequence.forEach(angle => {
+      if (motionState === 0 && angle > config.startThreshold) {
+        motionState = 1;
+      } else if (motionState === 1 && angle < config.midThreshold) {
+        motionState = 2;
+      } else if (motionState === 2 && angle > config.startThreshold) {
+        reps++;
+        motionState = 1;
+      }
+    });
+
+    expect(reps).toBe(1);
+    expect(motionState).toBe(1);
+  });
+
+  test('Math: 3D angle calculation should be consistent with 2D when Z is zero', () => {
+    const p1 = { x: 0, y: 1, z: 0 };
+    const p2 = { x: 0, y: 0, z: 0 };
+    const p3 = { x: 1, y: 0, z: 0 };
+
+    const angle = calculateAngle3D(p1, p2, p3);
+    expect(angle).toBe(90);
+  });
 });

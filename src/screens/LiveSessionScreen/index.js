@@ -1,66 +1,25 @@
-import React, { useState, useRef } from 'react';
-import { View, TouchableOpacity, Text } from 'react-native';
+import React, { useState } from 'react';
+import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { RNMediapipe } from '@thinksys/react-native-mediapipe';
 import { Ionicons } from '@expo/vector-icons';
-import { evaluateForm } from '../../utils/ruleEngine';
+import Svg, { Circle } from 'react-native-svg';
 import { mapMediaPipeToInternal } from '../../utils/poseMath';
-import { feedbackProvider } from '../../utils/feedback';
+import { usePoseProcessor } from '../../hooks/usePoseProcessor';
+import exerciseRules from '../../utils/rules.json';
 
-const PoseDetectionScreen = ({ navigation, route }) => {
+const LiveSessionScreen = ({ navigation, route }) => {
   const { exerciseType } = route.params || { exerciseType: 'Squat' }; 
-  const [feedback, setFeedback] = useState("Align your body...");
-  const [reps, setReps] = useState(0);
-  const [isAtBottom, setIsAtBottom] = useState(false);
-  const [isActive, setIsActive] = useState(false);
-
+  const [landmarks, setLandmarks] = useState(null);
+  const { reps, seconds, feedback, appState, processFrame } = usePoseProcessor(exerciseType);
   const handleLandmarks = (data) => {
     if (data && data.landmarks) {
       const internalLandmarks = mapMediaPipeToInternal(data.landmarks);
-      const exerciseData = exerciseRules[exerciseType];
-      const evaluation = evaluateForm(internalLandmarks, exerciseType);
-      
-      if (evaluation.isCorrect) setIsActive(true);
-      const kneeAngle = evaluation.currentAngle;
-      if (exerciseData.mode === 'reps' && evaluation.isCorrect) {
-        const { primaryJoints, startThreshold, midThreshold, type } = exerciseData.repConfig;
-        const currentAngle = calculateAngle(
-          internalLandmarks[primaryJoints[0]], 
-          internalLandmarks[primaryJoints[1]], 
-          internalLandmarks[primaryJoints[2]]
-        );
-
-        if (type === 'descending') {
-          if (currentAngle < midThreshold && !isAtBottom) setIsAtBottom(true);
-          else if (currentAngle > startThreshold && isAtBottom) countRep();
-        } 
-        else if (type === 'ascending') {
-          if (currentAngle > midThreshold && !isAtBottom) setIsAtBottom(true);
-          else if (currentAngle < startThreshold && isAtBottom) countRep();
-        }
-      }
-      else if (exerciseData.mode === 'hold') {
-        if (evaluation.isCorrect) {
-          if (!timerRef.current) {
-            timerRef.current = setInterval(() => {
-              setSeconds(prev => prev + 1);
-            }, 1000);
-          }
-        } else {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
-        }
-      }
-
-      const countRep = () => {
-        setReps(prev => prev + 1);
-        setIsAtBottom(false);
-        feedbackProvider.triggerVoiceOutput(`${reps + 1}`);
-      };
-
-      const message = feedbackProvider.processFeedback(evaluation);
-      setFeedback(`${message} | ${exerciseData.mode === 'reps' ? `Reps: ${reps}` : `Time: ${seconds}s`}`);
+      setLandmarks(internalLandmarks);
+      processFrame(internalLandmarks);
     }
   };
+
+  const currentConfig = exerciseRules[exerciseType];
 
   return (
     <View className="flex-1 bg-black">
@@ -82,8 +41,21 @@ const PoseDetectionScreen = ({ navigation, route }) => {
         rightAnkle={true}
       />
 
+      <Svg style={StyleSheet.absoluteFill}>
+        {landmarks && Object.keys(landmarks).map((id) => (
+           <Circle 
+             key={id}
+             cx={landmarks[id].x * 100 + "%"} 
+             cy={landmarks[id].y * 100 + "%"} 
+             r="4" 
+             fill={feedback === "Looking good!" || feedback === "Perfect!" ? "#00FF00" : "#FF0000"} 
+           />
+        ))}
+      </Svg>
+
       <View className="absolute top-12 left-6">
         <TouchableOpacity 
+          testID="close-button"
           onPress={() => navigation.goBack()}
           className="bg-white/20 p-3 rounded-full"
         >
@@ -93,7 +65,9 @@ const PoseDetectionScreen = ({ navigation, route }) => {
       
       <View className="absolute bottom-20 self-center bg-bbam-indigo-main/80 px-6 py-4 rounded-3xl">
         <Text className="text-white font-bold text-center text-m3-headline-medium">
-          {reps}
+          {appState === 'CALIBRATING' 
+            ? "CALIBRATING" 
+            : (currentConfig.mode === 'reps' ? reps : `${seconds}s`)}
         </Text>
         <Text className="text-white text-center text-m3-body-small">
           {feedback}
@@ -104,4 +78,4 @@ const PoseDetectionScreen = ({ navigation, route }) => {
   );
 };
 
-export default PoseDetectionScreen;
+export default LiveSessionScreen;
