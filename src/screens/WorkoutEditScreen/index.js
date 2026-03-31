@@ -3,34 +3,44 @@ import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import uuid from "react-native-uuid";
 import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CommonActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
+import { useQueryClient } from '@tanstack/react-query';
 
 import TextInput from '../../components/TextInput';
 import Button from '../../components/Button';
 import CardItem from '../../components/CardItem';
 import ReminderSection from '../../components/ReminderSection';
 
+import api from '../../api';
+
+import { mapWorkoutsToInternalStructure } from '../../utils/general';
+import exerciseRules from '../../utils/rules.json';
+
 const WorkoutEditScreen = ({ route, navigation }) => {
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
 
   // LLD attributes
   const { editMode, workout = {} } = route.params || {};
   const { id: planId } = workout;
   const [planName, setPlanName] = useState(editMode ? workout.name : "");
-  const [selectedExercises, setSelectedExercises] = useState(editMode ? workout.exerciseList : []);
+  const [initialExercises, setInitialExercises] = useState(
+    editMode ? JSON.stringify(workout.exerciseList) : "[]"
+  );
+  const [selectedExercises, setSelectedExercises] = useState(editMode ? workout.exerciseList.map(ex => ({ ...ex, instanceId: uuid.v4() })) : []);
   const [isLocalAlarmScheduled, setIsLocalAlarmScheduled] = useState(workout?.isReminderEnabled || false);
   const [currentSchedule, setCurrentSchedule] = useState(workout?.schedule || null);
   const [reminderFrequency, setReminderFrequency] = useState('Daily');
   const [reminderTime, setReminderTime] = useState(new Date());
   const [isLoading, setIsLoading] = useState(false);
 
-  const availableExercises = [
-    { id: '1', name: 'Squat', unit: 'rep' },
-    { id: '2', name: 'Push-Up', unit: 'rep' },
-    { id: '3', name: 'Plank', unit: 'sec' },
-    { id: '4', name: 'Lunge', unit: 'rep' }
-  ];
+  const availableExercises = Object.entries(exerciseRules).map(([key, value], index) => ({  // todo get from db
+    id: index + 1,
+    name: key,
+    unit: value.mode === 'hold' ? 'sec' : 'reps'
+  }));
 
   // LLD methods
 
@@ -114,6 +124,15 @@ const WorkoutEditScreen = ({ route, navigation }) => {
     });
   };
 
+  const hasExercisesChanged = () => {
+    const currentFormat = selectedExercises.map(({ instanceId, ...rest }) => ({
+      ...rest,
+      value: Number(rest.value)
+    }));
+    console.log({ current: JSON.stringify(currentFormat), initial: initialExercises, isSame: JSON.stringify(currentFormat) === initialExercises });
+    return JSON.stringify(currentFormat) !== initialExercises;
+  };
+
   const validatePlan = () => {
     if (!planName.trim()) {
       Alert.alert("Error", "Please enter a workout title.");
@@ -143,11 +162,50 @@ const WorkoutEditScreen = ({ route, navigation }) => {
       };
       
       console.log("Saving Plan:", finalPlan);
-      // Logic for API call or Context update goes here
-      
-      navigation.goBack();
+
+      const exercisesChanged = hasExercisesChanged();
+      const payload = { plan_name: planName }
+      if (exercisesChanged) {
+        payload.items = selectedExercises.map((exercise, index) => ({
+          exercise_id: exercise.id,
+          step_order: index + 1,
+          [exercise.unit === 'reps' ? 'target_reps' : 'target_seconds']: exercise.value
+        }))
+      }
+
+      //todo set notifications
+      let response;
+      if (editMode && planId) {
+        response = await api.patch(`/workout/plans/${planId}/`, payload);
+      } else {
+        response = await api.post('/workout/plans/', payload);
+      }
+
+      console.log({resp: response.data});
+      const newWorkoutData = mapWorkoutsToInternalStructure([response.data])[0];
+      if (exercisesChanged && response.data.id !== planId) {
+        setInitialExercises(newWorkoutData.exerciseList);
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['workoutPlans'] });
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 1, // This makes the second item in 'routes' the active screen
+          routes: [
+            { name: 'MainTabs' },
+            { 
+              name: 'WorkoutDetails',
+              params: {
+                workoutPlan: newWorkoutData,
+                fromEdit: true
+              }
+            },
+          ]
+        })
+      );
     } catch (error) {
-      Alert.alert("Save Failed", "Could not save workout plan.");
+      console.log({ workoutSaveError: error });
+      Alert.alert("Save Failed", error);
     } finally {
       setIsLoading(false);
     }
@@ -166,7 +224,7 @@ const WorkoutEditScreen = ({ route, navigation }) => {
         <CardItem
           title={item.name}
           subtitle={item.value}
-          exerciseCountType={item.unit === 'rep' ? 'Reps' : 'Seconds'}
+          exerciseCountType={item.unit === 'reps' ? 'Reps' : 'Seconds'}
           variant="exerciseEdit"
           onDelete={() => removeExercise(item.instanceId)}
           onCopy={() => duplicateExercise(item.instanceId)}
@@ -211,7 +269,7 @@ const WorkoutEditScreen = ({ route, navigation }) => {
             <View className="gap-2">
               {availableExercises.map(ex => (
                 <CardItem
-                  key={ex.id}
+                  key={`exercise-${ex.id}`}
                   title={ex.name}
                   variant="exerciseAdd"
                   onAdd={() => addExercise(ex)}

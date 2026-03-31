@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Button from '../../components/Button';
 import TextInput from '../../components/TextInput';
 import { useUser, useUpdateProfile } from '../../hooks/useAuth';
+import { getInitials } from '../../utils/general';
 
 const SectionTitle = ({ children }) => (
   <Text className='text-m3-label-large font-bold text-bbam-text-main mb-3'>
@@ -72,14 +73,7 @@ const ProfileSettingsScreen = ({ navigation }) => {
     setNotificationPreference();
   }, []);
 
-  const initials = useMemo(() => {
-    const name = userProfile?.user_name || "";
-    const parts = name.trim().split(" ").filter(Boolean);
-    if (!parts.length) return "U";
-    const first = parts[0]?.[0] || "U";
-    const last = parts.length > 1 ? parts[parts.length - 1]?.[0] : "";
-    return (first + last).toUpperCase();
-  }, [userProfile]);
+  const initials = useMemo(() => getInitials(userProfile), [userProfile]);
 
   const setNotificationPreference = async () => {
     const preference = await SecureStore.getItemAsync('notif_preference');
@@ -197,6 +191,7 @@ const ProfileSettingsScreen = ({ navigation }) => {
       setIsLoading(true);
       await SecureStore.deleteItemAsync('userToken');
       await SecureStore.deleteItemAsync('userId');
+      await SecureStore.deleteItemAsync('userEmail');
       // force to login screen
       queryClient.setQueryData(['user'], null);
       queryClient.clear();

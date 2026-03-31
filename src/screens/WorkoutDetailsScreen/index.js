@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Switch, Modal } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -14,6 +13,7 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
   const insets = useSafeAreaInsets();
 
   // these are not on lld. used for the datetimepicker
+  const [exerciseList, setExerciseList] = useState(null);
   const [currentSchedule, setCurrentSchedule] = useState(null);
   const [reminderTime, setReminderTime] = useState(new Date());
   const [reminderFrequency, setReminderFrequency] = useState('Daily'); // Daily, Weekly, Once
@@ -24,19 +24,10 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
 
   const { workoutPlan } = route.params;
   const { id: planId, totalExercises, estimatedDuration } = workoutPlan;
-  
-  // exerciseList would normally come from an api call to get workout details
-  const exerciseList = [
-    { id: '1', name: 'Squat', value: '12', unit: 'rep' },
-    { id: '2', name: 'Plank', value: '60', unit: 'sec'},
-    { id: '3', name: 'Push-Up', value: '10', unit: 'rep'},
-    { id: '4', name: 'Squat', value: '12', unit: 'rep'},
-    { id: '5', name: 'Lunge', value: '10', unit: 'rep'},
-    { id: '6', name: 'Biceps Curl', value: '15', unit: 'rep'},
-    { id: '7', name: 'Plank', value: '60', unit: 'sec' }
-  ];
 
-  const loadWorkoutPlan = (planId) => {};
+  const loadWorkoutPlan = (planId) => {
+    setExerciseList(workoutPlan.exerciseList || []);
+  };
   const handleStartWorkout = () => {
     console.log('pressed Start Workout');
     navigation.navigate('LiveSession');
@@ -49,7 +40,8 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
     setIsLocalAlarmScheduled(previousState => !previousState);
   };
 
-  const scheduleLocalNotification = async () => {
+  const scheduleLocalNotification = async () => { // not sure if this works yet
+    return;
     await Notifications.cancelAllScheduledNotificationsAsync();
     if (!currentSchedule) return;
 
@@ -88,6 +80,10 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
     }
   }, [currentSchedule, isLocalAlarmScheduled]);
 
+  useEffect(() => {
+    loadWorkoutPlan();
+  }, [workoutPlan]);
+
   return (
     <View className="flex-1 bg-bbam-back-page" style={{ paddingTop: insets.top }}>
       <View className="flex-1 px-6 gap-8">
@@ -110,7 +106,7 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
         <View className="flex-row gap-4 pb-8 border-b-[0.5px] border-[#D4D6DD]">
           <View className="flex-1 bg-bbam-back-card py-4 rounded-3xl items-center justify-center h-24">
             <MaterialCommunityIcons name="dumbbell" size={24} color="#585AD1" />
-            <Text className="text-m3-title-small font-bold mt-1">{`${totalExercises} Exercises`}</Text>
+            <Text className="text-m3-title-small font-bold mt-1">{`${totalExercises} Exercise${totalExercises > 1 ? 's' : ''}`}</Text>
           </View>
           <View className="flex-1 bg-bbam-back-card py-4 rounded-3xl items-center justify-center h-24">
             <Ionicons name="time" size={24} color="#585AD1" />
@@ -126,11 +122,11 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
           contentContainerClassName="flex-col gap-2"
           contentContainerStyle={{ paddingBottom: 20 }}
         >
-          {exerciseList.map((item) => (
+          {exerciseList?.map((item) => (
             <CardItem 
               key={item.id}
               title={item.name}
-              subtitle={item.value}
+              subtitle={`${item.value} ${item.unit === 'reps' ? 'Reps' : 'Seconds'}`}
               variant="exerciseDisplay"
             />
           ))}

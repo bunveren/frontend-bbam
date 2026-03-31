@@ -13,7 +13,7 @@ const Stack = createNativeStackNavigator();
 
 const RootNavigator = () => {
   const { data: user, isLoading } = useUser();
-  const isLoggedIn = user && user.user_name !== null && user.height_cm !== null && user.weight_kg !== null && user.age !== null && user.gender !== null;
+  const isLoggedIn = !!(user && user.user_name && user.height_cm && user.weight_kg && user.age && user.gender);
 
 
   if (isLoading) {
@@ -34,9 +34,11 @@ const RootNavigator = () => {
           <Stack.Screen
             name="WorkoutDetails" 
             component={WorkoutDetailsScreen} 
-            options={{
+            options={({ route }) => ({
+              headerShown: false,
               animation: 'slide_from_right',
-            }}
+              animationTypeForReplace: route.params?.fromEdit ? 'pop' : 'push'
+            })}
           />
           <Stack.Screen
             name="WorkoutEdit" 
