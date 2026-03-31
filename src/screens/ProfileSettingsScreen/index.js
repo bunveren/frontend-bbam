@@ -475,7 +475,8 @@ const ProfileSettingsScreen = ({ navigation }) => {
 
               <Button
                 title="Logout"
-                variant="secondary"
+                variant="primary"
+                className="h-16"
                 onPress={handleLogout}
                 isLoading={isLoading}
               />

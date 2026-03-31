@@ -91,11 +91,11 @@ const SessionListItem = ({ session, onPress }) => {
 const EmptyState = () => (
   <View style={{ alignItems: "center", paddingTop: 60, gap: 12 }}>
     <MaterialCommunityIcons name="dumbbell" size={48} color="#C7C9EE" />
-    <Text style={{ fontSize: 16, fontWeight: "700", color: "#263238" }}>
-      Henüz kayıtlı oturumunuz yok.
+    <Text className="text-m3-body-large font-bold text-bbam-text-main text-center">
+      You don't have any completed workout sessions yet.
     </Text>
-    <Text style={{ fontSize: 13, color: "#9DA3A9", textAlign: "center" }}>
-      Bir workout başlatın, tamamlayın ve{"\n"}geçmişiniz burada görünecek.
+    <Text className="text-m3-body-medium text-bbam-text-light text-center">
+      Start a workout plan, complete it and{"\n"}your history will appear here.
     </Text>
   </View>
 );
@@ -444,13 +444,13 @@ const ProgressScreen = ({ route }) => {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F7F9FA", paddingTop: insets.top }}>
-      <View style={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 12 }}>
-        <Text style={{ fontSize: 24, fontWeight: "700", color: "#263238" }}>
+    <View className="flex-1 bg-bbam-back-page" style={{ paddingTop: insets.top }}>
+      <View style={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 12 }}>
+        <Text className="text-m3-headline-medium font-bold text-bbam-text-main">
           Progress
         </Text>
-        <Text style={{ fontSize: 13, color: "#9DA3A9", marginTop: 2 }}>
-          Geçmiş oturumlarınız
+        <Text className="text-m3-body-medium text-bbam-text-light mt-2">
+          Previous Sessions
         </Text>
       </View>
 
