@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '../api';
 import * as SecureStore from 'expo-secure-store';
+import { fetchExerciseLibraryFromApi } from '../services/exerciseService';
+import api from '../api';
 
 export const useUser = () => {
   return useQuery({
@@ -37,6 +38,11 @@ export const useLogin = () => {
       
       // invalidate to trigger useUser
       queryClient.invalidateQueries({ queryKey: ['user'] });
+      
+      queryClient.prefetchQuery({
+        queryKey: ['exerciseLibrary'],
+        queryFn: fetchExerciseLibraryFromApi
+      });
     },
   });
 };

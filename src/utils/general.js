@@ -13,10 +13,10 @@ export const mapWorkoutsToInternalStructure = (workoutList) => {
     name: plan_name,
     totalExercises: items.length,
     estimatedDuration: 0, // todo a util to calculate this?
-    exerciseList: items.map(({ exercise: { id: exerciseId, name }, target_reps, target_seconds }) => ({
+    exerciseList: items.map(({ exercise: { id: exerciseId, name: exerciseName }, target_reps, target_seconds }) => ({
       id: exerciseId,
-      name,
-      unit: target_reps !== null ? 'reps' : 'sec',
+      name: exerciseName.replaceAll('-', ' '),
+      mode: target_reps !== null ? 'reps' : 'hold',
       value: target_reps !== null ? target_reps : target_seconds
     }))
   }));

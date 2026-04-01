@@ -126,7 +126,7 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
             <CardItem 
               key={item.id}
               title={item.name}
-              subtitle={`${item.value} ${item.unit === 'reps' ? 'Reps' : 'Seconds'}`}
+              subtitle={`${item.value} ${item.mode === 'reps' ? 'Reps' : 'Seconds'}`}
               variant="exerciseDisplay"
             />
           ))}

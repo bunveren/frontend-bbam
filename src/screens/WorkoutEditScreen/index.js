@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import uuid from "react-native-uuid";
 import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +13,7 @@ import Button from '../../components/Button';
 import CardItem from '../../components/CardItem';
 import ReminderSection from '../../components/ReminderSection';
 
+import { useExerciseLibrary } from '../../hooks/useExerciseLibrary';
 import api from '../../api';
 
 import { mapWorkoutsToInternalStructure } from '../../utils/general';
@@ -22,6 +23,8 @@ const WorkoutEditScreen = ({ route, navigation }) => {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
 
+  const { data: library, isLoading: isLibLoading } = useExerciseLibrary();
+
   // LLD attributes
   const { editMode, workout = {} } = route.params || {};
   const { id: planId } = workout;
@@ -29,6 +32,7 @@ const WorkoutEditScreen = ({ route, navigation }) => {
   const [initialExercises, setInitialExercises] = useState(
     editMode ? JSON.stringify(workout.exerciseList) : "[]"
   );
+  const [availableExercises, setAvailableExercises] = useState([]);
   const [selectedExercises, setSelectedExercises] = useState(editMode ? workout.exerciseList.map(ex => ({ ...ex, instanceId: uuid.v4() })) : []);
   const [isLocalAlarmScheduled, setIsLocalAlarmScheduled] = useState(workout?.isReminderEnabled || false);
   const [currentSchedule, setCurrentSchedule] = useState(workout?.schedule || null);
@@ -36,17 +40,17 @@ const WorkoutEditScreen = ({ route, navigation }) => {
   const [reminderTime, setReminderTime] = useState(new Date());
   const [isLoading, setIsLoading] = useState(false);
 
-  const availableExercises = Object.entries(exerciseRules).map(([key, value], index) => ({  // todo get from db
-    id: index + 1,
-    name: key,
-    unit: value.mode === 'hold' ? 'sec' : 'reps'
-  }));
-
   // LLD methods
 
   const loadExerciseLibrary = () => {
-
+    if (library) {
+      setAvailableExercises(library);
+    }
   };
+
+  useEffect(() => {
+    loadExerciseLibrary();
+  }, [library]);
 
   const addExercise = (exercise) => {
     const newEntry = {
@@ -169,7 +173,7 @@ const WorkoutEditScreen = ({ route, navigation }) => {
         payload.items = selectedExercises.map((exercise, index) => ({
           exercise_id: exercise.id,
           step_order: index + 1,
-          [exercise.unit === 'reps' ? 'target_reps' : 'target_seconds']: exercise.value
+          [exercise.mode === 'reps' ? 'target_reps' : 'target_seconds']: exercise.value
         }))
       }
 
@@ -224,7 +228,7 @@ const WorkoutEditScreen = ({ route, navigation }) => {
         <CardItem
           title={item.name}
           subtitle={item.value}
-          exerciseCountType={item.unit === 'reps' ? 'Reps' : 'Seconds'}
+          exerciseCountType={item.mode === 'reps' ? 'Reps' : 'Seconds'}
           variant="exerciseEdit"
           onDelete={() => removeExercise(item.instanceId)}
           onCopy={() => duplicateExercise(item.instanceId)}
@@ -264,19 +268,25 @@ const WorkoutEditScreen = ({ route, navigation }) => {
           Add Exercises
         </Text>
 
-        <View className="max-h-64 mx-4 pb-4 border-b-[0.5px] border-[#D4D6DD]">
-          <ScrollView showsVerticalScrollIndicator>
-            <View className="gap-2">
-              {availableExercises.map(ex => (
-                <CardItem
-                  key={`exercise-${ex.id}`}
-                  title={ex.name}
-                  variant="exerciseAdd"
-                  onAdd={() => addExercise(ex)}
-                />
-              ))}
+        <View className="h-64 max-h-64 mx-4 pb-4 border-b-[0.5px] border-[#D4D6DD]">
+          {isLibLoading ? (
+            <View className="flex-1 justify-center">
+              <ActivityIndicator color="#585AD1" size="large" className="mt-10" />
             </View>
-          </ScrollView>
+          ) : (
+            <ScrollView showsVerticalScrollIndicator>
+              <View className="gap-2">
+                {availableExercises.map(ex => (
+                  <CardItem
+                    key={`exercise-${ex.id}`}
+                    title={ex.name}
+                    variant="exerciseAdd"
+                    onAdd={() => addExercise(ex)}
+                  />
+                ))}
+              </View>
+            </ScrollView>  
+          )}
         </View>
 
         <Text className="text-m3-label-large font-bold text-bbam-text-main px-6 my-3">
