@@ -41,7 +41,6 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
   };
 
   const scheduleLocalNotification = async () => { // not sure if this works yet
-    return;
     await Notifications.cancelAllScheduledNotificationsAsync();
     if (!currentSchedule) return;
 

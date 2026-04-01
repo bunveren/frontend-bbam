@@ -1,8 +1,11 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { screen, fireEvent, waitFor } from '@testing-library/react-native';
+import * as Notifications from 'expo-notifications';
+import { render, defaultQueryClient } from './testUtils';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import { NavigationContainer } from '@react-navigation/native';
 import { Alert } from 'react-native';
+import api from '../api';
 
 global.fetch = jest.fn();
 
@@ -20,12 +23,23 @@ describe('OnboardingScreen', () => {
   };
 
   beforeEach(() => {
+    //jest.clearAllMocks();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    defaultQueryClient.clear();
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
     jest.clearAllMocks();
   });
 
   describe('OnboardingScreen Validation (UT-01)', () => {
-    it('UT-01a: shows error for invalid email', () => {
-      render(component);
+    it('UT-01a: shows error for invalid email', async () => {
+      const { unmount } = render(component);
+      await waitFor(() => {
+        expect(Notifications.getExpoPushTokenAsync).toHaveBeenCalled();
+      });
       switchToSignup();
 
       const emailInput = screen.getByPlaceholderText(/name@email.com/i);
@@ -34,11 +48,18 @@ describe('OnboardingScreen', () => {
       fireEvent.changeText(emailInput, 'invalid_random_text');
       fireEvent.press(continueButton);
 
-      expect(Alert.alert).toHaveBeenCalledWith("Invalid Input", "Email is invalid");
+      await waitFor(() => {
+        expect(screen.getByText(/email is invalid/i)).toBeTruthy();  
+      });
+
+      unmount();
     });
 
-    it('UT-01b: shows error for short password', () => {
-      render(component);
+    it('UT-01b: shows error for short password', async () => {
+      const { unmount } = render(component);
+      await waitFor(() => {
+        expect(Notifications.getExpoPushTokenAsync).toHaveBeenCalled();
+      });
       switchToSignup();
 
       const emailInput = screen.getByPlaceholderText(/name@email.com/i);
@@ -51,22 +72,26 @@ describe('OnboardingScreen', () => {
       
       fireEvent.press(continueButton);
 
-      expect(Alert.alert).toHaveBeenCalledWith(
-        "Weak Password", 
-        expect.stringContaining("at least 8 characters long")
-      );
+      await waitFor(() => {
+        expect(screen.getByText(/password should be at least 8 characters long/i)).toBeTruthy();  
+      });
+
+      unmount();
     });
 
   });
 
   it('UT-02: transitions to setup view after successful 200 OK response', async () => {
     // mocking a successful API response
-    fetch.mockResolvedValueOnce({
-      status: 200,
-      json: async () => ({ success: true, user: { id: '123' } }),
+    api.post.mockResolvedValue({ 
+      status: 200, 
+      data: { success: true, user: { id: '123' } } 
     });
 
-    render(component);
+    const { unmount } = render(component);
+    await waitFor(() => {
+      expect(Notifications.getExpoPushTokenAsync).toHaveBeenCalled();
+    });
     switchToSignup();
 
     fireEvent.changeText(screen.getByPlaceholderText(/name@email.com/i), 'test@example.com');
@@ -80,5 +105,7 @@ describe('OnboardingScreen', () => {
     await waitFor(() => {
       expect(screen.getByText(/set up your account/i)).toBeTruthy(); 
     });
+
+    unmount();
   });
 });

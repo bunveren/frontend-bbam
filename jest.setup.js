@@ -39,8 +39,16 @@ jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper', () => ({
 }), { virtual: true });
 
 jest.mock('expo-notifications', () => ({
-  cancelAllScheduledNotificationsAsync: jest.fn(),
-  scheduleNotificationAsync: jest.fn(),
+  cancelAllScheduledNotificationsAsync: jest.fn().mockResolvedValue(null),
+  scheduleNotificationAsync: jest.fn().mockResolvedValue('fake-notification-id'),
+  getExpoPushTokenAsync: jest.fn().mockResolvedValue({ data: 'fake-token' }),
+  setNotificationHandler: jest.fn(),
+  addNotificationReceivedListener: jest.fn().mockReturnValue({
+    remove: jest.fn(),
+  }),
+  addNotificationResponseReceivedListener: jest.fn().mockReturnValue({
+    remove: jest.fn(),
+  }),
 }));
 
 jest.mock('react-native-safe-area-context', () => {
@@ -52,3 +60,24 @@ jest.mock('react-native-safe-area-context', () => {
     useSafeAreaFrame: () => ({ x: 0, y: 0, width: 390, height: 844 }),
   };
 });
+
+jest.mock('expo-application', () => ({
+  getIosIdForVendorAsync: jest.fn().mockResolvedValue('ios-uuid'),
+  getAndroidId: jest.fn().mockReturnValue('android-uuid'),
+}));
+
+jest.mock('expo-constants', () => ({
+  expoConfig: { extra: { eas: { projectId: 'test-project-id' } } },
+}));
+
+jest.mock('./src/api', () => ({
+  post: jest.fn(),
+  get: jest.fn(),
+  patch: jest.fn(),
+}));
+
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: jest.fn().mockResolvedValue('fake-token'),
+  setItemAsync: jest.fn().mockResolvedValue(null),
+  deleteItemAsync: jest.fn().mockResolvedValue(null),
+}));

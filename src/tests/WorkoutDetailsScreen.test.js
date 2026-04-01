@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { render } from './testUtils';
+import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import * as Notifications from 'expo-notifications';
 import WorkoutDetailsScreen from '../screens/WorkoutDetailsScreen';
 import { NavigationContainer } from '@react-navigation/native';
