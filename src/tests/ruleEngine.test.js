@@ -30,7 +30,7 @@ describe('Exercise Application - Unit Tests', () => {
       28: { x: 100, y: 100, visibility: 1 }  // Ankle
     };
 
-    const result = evaluateForm(mockLandmarks, 'Squat');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Squat']);
     
     expect(result.isCorrect).toBe(true);
     expect(result.errorType).toBeNull();
@@ -59,7 +59,7 @@ describe('Exercise Application - Unit Tests', () => {
 
   test('UT-18: Should detect significant difference between exercise info & actual pose', () => {
     const jumpingJackLandmarks = generateFullBodyMock([11, 0, 12], [30]);
-    const result = evaluateForm(jumpingJackLandmarks, 'Squat');
+    const result = evaluateForm(jumpingJackLandmarks, exerciseRules['Squat']);
     expect(result.isCorrect).toBe(true);// expect it to bypass rules and return default success FOR NOW
   });
 
@@ -67,7 +67,7 @@ describe('Exercise Application - Unit Tests', () => {
     const jointIds = [12, 24, 26, 28];
     const angles = [180, 75];
     const mockLandmarks = generateFullBodyMock(jointIds, angles);
-    const result = evaluateForm(mockLandmarks, 'Squat');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Squat']);
     
     expect(result.isCorrect).toBe(true);
     expect(result.errorType).toBeNull();
@@ -77,7 +77,7 @@ describe('Exercise Application - Unit Tests', () => {
     const jointIds = [12, 24, 26, 28];
     const angles = [180, 110];
     const mockLandmarks = generateFullBodyMock(jointIds, angles);
-    const result = evaluateForm(mockLandmarks, 'Squat');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Squat']);
     
     expect(result.isCorrect).toBe(false);
     expect(result.errorType).toBe('S-01');
@@ -110,13 +110,13 @@ describe('RuleEngine: Multi-Joint Validation', () => {
     const jointIds = [12, 24, 26, 28];
     const angles = [180, 75]; 
     const mockLandmarks = generateFullBodyMock(jointIds, angles, 90);
-    const result = evaluateForm(mockLandmarks, 'Squat');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Squat']);
     expect(result.isCorrect).toBe(true); expect(result.errorType).toBeNull();
   });
 
   test('Push-up: P-01 - Should detect sagging hips at 150 degrees', () => {
     const mockLandmarks = generateFullBodyMock([12, 24, 28], [150], 0);
-    const result = evaluateForm(mockLandmarks, 'Push-up');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Push-up']);
 
     expect(result.isCorrect).toBe(false);
     expect(result.errorType).toBe('P-01');
@@ -125,7 +125,7 @@ describe('RuleEngine: Multi-Joint Validation', () => {
 
   test('Bicep-Curl: BC-01 - Should detect over-extended elbow (175°)', () => {
     const mockLandmarks = generateFullBodyMock([12, 14, 16], [175], 90);
-    const result = evaluateForm(mockLandmarks, 'Bicep-Curl');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Bicep-Curl']);
 
     expect(result.isCorrect).toBe(false);
     expect(result.errorType).toBe('BC-01');
@@ -136,7 +136,7 @@ describe('RuleEngine: Multi-Joint Validation', () => {
     const jointIds = [12, 24, 26];
     const angles = [130]; 
     const mockLandmarks = generateFullBodyMock(jointIds, angles, 0);
-    const result = evaluateForm(mockLandmarks, 'Glute-Bridge');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Glute-Bridge']);
 
     expect(result.isCorrect).toBe(false);
     expect(result.errorType).toBe('GB-01');
@@ -152,7 +152,7 @@ describe('Dynamic Rule Testing', () => {
       'S-02': 130 
     });
 
-    const result = evaluateForm(mockLandmarks, 'Squat');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Squat']);
     expect(result.isCorrect).toBe(false);
     expect(['S-01', 'S-02']).toContain(result.errorType); 
   });
@@ -163,7 +163,7 @@ describe('Dynamic Rule Testing', () => {
       'BC-02': 45
     });
 
-    const result = evaluateForm(mockLandmarks, 'Bicep-Curl');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Bicep-Curl']);
     expect(result.isCorrect).toBe(true);
     expect(result.errorType).toBeNull();
   });
@@ -176,13 +176,13 @@ describe('Exercise Rule Engine - Comprehensive Logic Tests', () => {
   // Jointler: [12, 24, 26, 28] -> 4 joint, 2 açı lazım: [Torso Açı, Diz Açı]
   test('Squat: Correct form (Straight torso, deep knee bend)', () => {
     const mockLandmarks = generateFullBodyMock([12, 24, 26, 28], [175, 80]);
-    const result = evaluateForm(mockLandmarks, 'Squat');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Squat']);
     expect(result.isCorrect).toBe(true);
   });
 
   test('Squat: Incorrect form (S-01: Shallow depth)', () => {
     const mockLandmarks = generateFullBodyMock([12, 24, 26, 28], [175, 120]);
-    const result = evaluateForm(mockLandmarks, 'Squat');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Squat']);
     expect(result.isCorrect).toBe(false);
     expect(result.errorType).toBe('S-01');
   });
@@ -191,13 +191,13 @@ describe('Exercise Rule Engine - Comprehensive Logic Tests', () => {
   // Jointler: [12, 14, 16, 24, 28] -> 5 joint, 3 açı: [Dirsek, Omuz-Kalça, Kalça-Diz]
   test('Push-up: Correct form (Straight body, proper depth)', () => {
     const mockLandmarks = generateFullBodyMock([14, 12, 24, 28], [80, 175]);
-    const result = evaluateForm(mockLandmarks, 'Push-up');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Push-up']);
     expect(result.isCorrect).toBe(true);
   });
 
   test('Push-up: Incorrect form (P-01: Sagging hips)', () => {
     const mockLandmarks = generateFullBodyMock([14, 12, 24, 28], [80, 150]);
-    const result = evaluateForm(mockLandmarks, 'Push-up');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Push-up']);
     expect(result.isCorrect).toBe(false);
     expect(result.errorType).toBe('P-01');
   });
@@ -205,13 +205,13 @@ describe('Exercise Rule Engine - Comprehensive Logic Tests', () => {
   // --- PLANK ---
   test('Plank: Correct form (Strong line)', () => {
     const mockLandmarks = generateFullBodyMock([12, 24, 28], [178]); 
-    const result = evaluateForm(mockLandmarks, 'Plank');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Plank']);
     expect(result.isCorrect).toBe(true);
   });
 
   test('Plank: Incorrect form (PL-01: High hips)', () => {
     const mockLandmarks = generateFullBodyMock([12, 24, 28], [150]);
-    const result = evaluateForm(mockLandmarks, 'Plank');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Plank']);
     expect(result.isCorrect).toBe(false);
     expect(result.errorType).toBe('PL-01');
   });
@@ -219,13 +219,13 @@ describe('Exercise Rule Engine - Comprehensive Logic Tests', () => {
   // --- BICEP-CURL ---
   test('Bicep-Curl: Correct form (Full contraction)', () => {
     const mockLandmarks = generateFullBodyMock([12, 14, 16], [45]);
-    const result = evaluateForm(mockLandmarks, 'Bicep-Curl');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Bicep-Curl']);
     expect(result.isCorrect).toBe(true);
   });
 
   test('Bicep-Curl: Incorrect form (BC-01: Locking elbows)', () => {
     const mockLandmarks = generateFullBodyMock([12, 14, 16], [175]);
-    const result = evaluateForm(mockLandmarks, 'Bicep-Curl');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Bicep-Curl']);
     expect(result.isCorrect).toBe(false);
     expect(result.errorType).toBe('BC-01');
   });
@@ -233,13 +233,13 @@ describe('Exercise Rule Engine - Comprehensive Logic Tests', () => {
   // --- LUNGE ---
   test('Lunge: Correct form (Upright torso, 90deg knee)', () => {
     const mockLandmarks = generateFullBodyMock([12, 24, 26, 28], [170, 90]);
-    const result = evaluateForm(mockLandmarks, 'Lunge');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Lunge']);
     expect(result.isCorrect).toBe(true);
   });
 
   test('Lunge: Incorrect form (L-02: Leaning too far forward)', () => {
     const mockLandmarks = generateFullBodyMock([12, 24, 26, 28], [130, 90]);
-    const result = evaluateForm(mockLandmarks, 'Lunge');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Lunge']);
     expect(result.isCorrect).toBe(false);
     expect(result.errorType).toBe('L-02');
   });
@@ -252,13 +252,13 @@ describe('Exercise Rule Engine - Comprehensive Logic Tests', () => {
     12: { x: 0.7, y: 0.4, visibility: 1 }
   };
 
-    const result = evaluateForm(mockLandmarks, 'Jumping-Jack');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Jumping-Jack']);
     expect(result.isCorrect).toBe(true);
   });
 
   test('Jumping-Jack: Incorrect form (JJ-01: Low arms)', () => {
     const mockLandmarks = generateFullBodyMock([11, 0, 12], [40]);
-    const result = evaluateForm(mockLandmarks, 'Jumping-Jack');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Jumping-Jack']);
     expect(result.isCorrect).toBe(false);
     expect(result.errorType).toBe('JJ-01');
   });
@@ -266,13 +266,13 @@ describe('Exercise Rule Engine - Comprehensive Logic Tests', () => {
   // --- SHOULDER-PRESS ---
   test('Shoulder-Press: Correct form (High extension)', () => {
     const mockLandmarks = generateFullBodyMock([12, 14, 16], [165]);
-    const result = evaluateForm(mockLandmarks, 'Shoulder-Press');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Shoulder-Press']);
     expect(result.isCorrect).toBe(true);
   });
 
   test('Shoulder-Press: Incorrect form (SP-01: Elbows too low)', () => {
     const mockLandmarks = generateFullBodyMock([12, 14, 16], [50]);
-    const result = evaluateForm(mockLandmarks, 'Shoulder-Press');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Shoulder-Press']);
     expect(result.isCorrect).toBe(false);
     expect(result.errorType).toBe('SP-01');
   });
@@ -280,13 +280,13 @@ describe('Exercise Rule Engine - Comprehensive Logic Tests', () => {
   // --- GLUTE-BRIDGE ---
   test('Glute-Bridge: Correct form (Full hip lockout)', () => {
     const mockLandmarks = generateFullBodyMock([12, 24, 26], [175]);
-    const result = evaluateForm(mockLandmarks, 'Glute-Bridge');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Glute-Bridge']);
     expect(result.isCorrect).toBe(true);
   });
 
   test('Glute-Bridge: Incorrect form (GB-01: Low hips)', () => {
     const mockLandmarks = generateFullBodyMock([12, 24, 26], [130]);
-    const result = evaluateForm(mockLandmarks, 'Glute-Bridge');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Glute-Bridge']);
     expect(result.isCorrect).toBe(false);
     expect(result.errorType).toBe('GB-01');
   });
@@ -297,7 +297,7 @@ describe('Exercise Rule Engine - Comprehensive Logic Tests', () => {
       23: { x: 0, y: 0, visibility: 0.9 }, 25: { x: 0, y: 100, visibility: 0.9 }, 27: { x: 100, y: 100, visibility: 0.9 }
     };
 
-    const result = evaluateForm(mockLandmarks, 'Squat');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Squat']);
     expect(result.isCorrect).toBe(true);
     expect(result.errorType).toBeNull();
   });
@@ -308,7 +308,7 @@ describe('Exercise Rule Engine - Comprehensive Logic Tests', () => {
       23: { x: 0, y: 0, visibility: 1 }, 25: { x: 0, y: 100, visibility: 1 }, 27: { x: 500, y: 500, visibility: 1 }
     };
 
-    const result = evaluateForm(mockLandmarks, 'Squat');
+    const result = evaluateForm(mockLandmarks, exerciseRules['Squat']);
     expect(result.isCorrect).toBe(true);
   });
 
