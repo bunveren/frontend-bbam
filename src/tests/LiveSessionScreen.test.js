@@ -3,6 +3,7 @@ import { render, fireEvent, cleanup } from '@testing-library/react-native';
 import LiveSessionScreen from '../screens/LiveSessionScreen';
 import { usePoseProcessor } from '../hooks/usePoseProcessor';
 import { mapMediaPipeToInternal } from '../utils/poseMath';
+import { useExerciseLibrary } from '../hooks/useExerciseLibrary';
 
 jest.mock('../hooks/usePoseProcessor');
 jest.mock('../utils/poseMath', () => ({
@@ -36,10 +37,22 @@ jest.mock('react-native-svg', () => {
   };
 });
 
+jest.mock('../utils/feedback', () => ({
+  feedbackProvider: {
+    processFeedback: jest.fn(),
+    triggerVoiceOutput: jest.fn(),
+  },
+}));
+
+jest.mock('../hooks/useExerciseLibrary');
+
 describe('LiveSessionScreen - UI & Integration Tests', () => {
-  const mockNavigation = { goBack: jest.fn() };
   const mockRoute = { params: { exerciseType: 'Squat' } };
   const mockProcessFrame = jest.fn();
+  const mockNavigation = { 
+    goBack: jest.fn(), 
+    navigate: jest.fn() 
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -53,6 +66,11 @@ describe('LiveSessionScreen - UI & Integration Tests', () => {
     });
 
     mapMediaPipeToInternal.mockReturnValue({ 11: { x: 0.5, y: 0.5 } });
+
+    useExerciseLibrary.mockReturnValue({
+      data: { '1': { mode: 'reps', name: 'Squat' } },
+      isLoading: false
+    });
   });
 
   afterEach(cleanup);
@@ -63,6 +81,16 @@ describe('LiveSessionScreen - UI & Integration Tests', () => {
   });
 
   test('ST-02: should display rep counter when calibration ends', () => {
+    const mockRepRoute = { 
+      params: { 
+        exerciseList: [{ id: 'squat_1', name: 'Squat', mode: 'reps', value: 10 }] 
+      } 
+    };
+    useExerciseLibrary.mockReturnValue({
+      data: { 'squat_1': { mode: 'reps' } }, 
+      isLoading: false
+    });
+
     usePoseProcessor.mockReturnValue({
       reps: 5,
       seconds: 0,
@@ -70,12 +98,18 @@ describe('LiveSessionScreen - UI & Integration Tests', () => {
       appState: 'WORKOUT',
       processFrame: mockProcessFrame,
     });
-    const { getByText, queryByText } = render(<LiveSessionScreen navigation={mockNavigation} route={mockRoute} />);
-    expect(queryByText('CALIBRATING')).toBeNull();
-    expect(getByText('5')).toBeTruthy();
+
+    const { getByText } = render(<LiveSessionScreen navigation={mockNavigation} route={mockRepRoute} />);
+    expect(getByText(/5 \/ 10/)).toBeTruthy();
   });
 
   test('ST-03: should display hold counter when calibration ends', () => {
+    const mockHoldRoute = { 
+      params: { 
+        exerciseList: [{ id: 'plank_1', name: 'Plank', mode: 'hold', value: 15 }] 
+      } 
+    };
+
     usePoseProcessor.mockReturnValue({
       reps: 0,
       seconds: 15,
@@ -83,8 +117,9 @@ describe('LiveSessionScreen - UI & Integration Tests', () => {
       appState: 'WORKOUT',
       processFrame: mockProcessFrame,
     });
-    const { getByText } = render(<LiveSessionScreen navigation={mockNavigation} route={{ params: { exerciseType: 'Plank' } }} />);
-    expect(getByText('15s')).toBeTruthy();
+    
+    const { getByText } = render(<LiveSessionScreen navigation={mockNavigation} route={mockHoldRoute} />);
+    expect(getByText(/15s \/ 15s/)).toBeTruthy();
   });
 
   test('ST-04: close button should work', () => {
@@ -139,6 +174,12 @@ describe('LiveSessionScreen - UI & Integration Tests', () => {
   });
 
   test('ST-09: second format must be true for hold type exercises', () => {
+    const mockHoldRoute = { 
+      params: { 
+        exerciseList: [{ id: 'plank_1', mode: 'hold', value: 60 }] 
+      } 
+    };
+
     usePoseProcessor.mockReturnValue({
       reps: 0,
       seconds: 45,
@@ -146,8 +187,9 @@ describe('LiveSessionScreen - UI & Integration Tests', () => {
       appState: 'WORKOUT',
       processFrame: mockProcessFrame,
     });
-    const { getByText } = render(<LiveSessionScreen navigation={mockNavigation} route={{ params: { exerciseType: 'Plank' } }} />);
-    expect(getByText('45s')).toBeTruthy();
+
+    const { getByText } = render(<LiveSessionScreen navigation={mockNavigation} route={mockHoldRoute} />);
+    expect(getByText(/45s \/ 60s/)).toBeTruthy();
   });
 
   test('ST-10: skeleton color must change in correct form', () => {
@@ -162,5 +204,81 @@ describe('LiveSessionScreen - UI & Integration Tests', () => {
     
     const circles = getAllByTestId('svg-circle');
     expect(circles[0].props.fill).toBe('#00FF00');
+  });
+});
+
+describe('LiveSessionScreen - Egzersiz Geçiş ve Otomatik İlerleme Testleri', () => {
+  const mockNavigation = { goBack: jest.fn(), navigate: jest.fn() };
+  const mockExerciseList = [
+    { id: 'squat_1', name: 'Squat', mode: 'reps', value: 3 },
+    { id: 'plank_1', name: 'Plank', mode: 'hold', value: 10 }
+  ];
+  const mockRoute = { params: { exerciseList: mockExerciseList, sessionId: 123 } };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    require('../hooks/useExerciseLibrary').useExerciseLibrary.mockReturnValue({
+      data: { 
+        'squat_1': { mode: 'reps' }, 
+        'plank_1': { mode: 'hold' } 
+      }
+    });
+  });
+
+  test('ST-11: ilk egzersizle başlamalı ve hedefi göstermeli', () => {
+    usePoseProcessor.mockReturnValue({
+      reps: 0, seconds: 0, appState: 'WORKOUT', feedback: "Looking good!", processFrame: jest.fn()
+    });
+    const { getByText } = render(<LiveSessionScreen navigation={mockNavigation} route={mockRoute} />);
+    expect(getByText(/0 \/ 3/)).toBeTruthy();
+  });
+
+  test('ST-12: hedef tekrara ulaşıldığında bir sonraki egzersize geçmeli', () => {
+    const { rerender, getByText } = render(<LiveSessionScreen navigation={mockNavigation} route={mockRoute} />);
+    usePoseProcessor.mockReturnValue({
+      reps: 3, seconds: 0, appState: 'WORKOUT', feedback: "Looking good!", processFrame: jest.fn()
+    });
+
+    rerender(<LiveSessionScreen navigation={mockNavigation} route={mockRoute} />);
+    expect(getByText(/0s/)).toBeTruthy(); 
+  });
+
+  test('ST-13: son egzersiz bittiğinde SessionSummary ekranına yönlendirmeli', () => {
+
+    const singleExerciseRoute = { 
+      params: { 
+        exerciseList: [{ id: 'plank_1', name: 'Plank', mode: 'hold', value: 10 }],
+        sessionId: 123 
+      } 
+    };
+
+    usePoseProcessor.mockReturnValue({
+      reps: 0, 
+      seconds: 10,
+      appState: 'WORKOUT', 
+      feedback: "Perfect!", 
+      processFrame: jest.fn()
+    });
+
+    const finalExerciseRoute = { 
+      params: { 
+        exerciseList: [{ id: 'plank_1', name: 'Plank', mode: 'hold', value: 10 }],
+        sessionId: 123 
+      } 
+    };
+
+    render(<LiveSessionScreen navigation={mockNavigation} route={singleExerciseRoute} />);
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('SessionSummary', { sessionId: 123 });
+  });
+
+  test('ST-14: egzersiz değiştiğinde usePoseProcessor yeni ID ile çağrılmalı', () => {
+    const mockProcess = usePoseProcessor;
+    const { rerender } = render(<LiveSessionScreen navigation={mockNavigation} route={mockRoute} />);
+    expect(mockProcess).toHaveBeenCalledWith('squat_1');
+    usePoseProcessor.mockReturnValue({
+      reps: 3, seconds: 0, appState: 'WORKOUT', processFrame: jest.fn()
+    });
+    rerender(<LiveSessionScreen navigation={mockNavigation} route={mockRoute} />);
+    expect(mockProcess).toHaveBeenCalledWith('plank_1');
   });
 });

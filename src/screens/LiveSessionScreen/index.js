@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { RNMediapipe } from '@thinksys/react-native-mediapipe';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,15 +5,18 @@ import Svg, { Circle } from 'react-native-svg';
 import { mapMediaPipeToInternal } from '../../utils/poseMath';
 import { usePoseProcessor } from '../../hooks/usePoseProcessor';
 import { useExerciseLibrary } from '../../hooks/useExerciseLibrary';
+import React, { useState, useEffect } from 'react';
+import { feedbackProvider } from '../../utils/feedback';
 
 const LiveSessionScreen = ({ navigation, route }) => {
   const { exerciseList = [] } = route.params || {};
-  console.log({ exerciseList }); // [{id,mode,name,value(target reps/seconds)}]
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const currentExercise = exerciseList[currentIndex] || {};
   const [landmarks, setLandmarks] = useState(null);
-  const [currentExercise, setCurrentExercise] = useState(exerciseList[0] || {});
+  //console.log({ exerciseList }); // [{id,mode,name,value(target reps/seconds)}]
   const { reps, seconds, feedback, appState, processFrame } = usePoseProcessor(currentExercise.id);
   const { data: exerciseLibrary = {} } = useExerciseLibrary(); // same structure as rules.json but keys are ids
-  console.log({ exerciseLibrary });
+  //console.log({ exerciseLibrary });
   const handleLandmarks = (data) => {
     if (data && data.landmarks) {
       const internalLandmarks = mapMediaPipeToInternal(data.landmarks);
@@ -22,6 +24,24 @@ const LiveSessionScreen = ({ navigation, route }) => {
       processFrame(internalLandmarks);
     }
   };
+
+  const handleNextExercise = () => {
+    if (currentIndex < exerciseList.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+      feedbackProvider.triggerVoiceOutput("Exercise complete! Get ready for the next one.");
+    } else {
+      navigation.navigate('SessionSummary', { sessionId: route.params.sessionId });
+    }
+  };
+
+  useEffect(() => {
+    const targetValue = currentExercise.value || 0;
+    const mode = currentExercise.mode;
+    const isFinished = mode === 'reps' ? reps >= targetValue : seconds >= targetValue;
+    if (isFinished && targetValue > 0) {
+      handleNextExercise();
+    }
+  }, [reps, seconds, currentIndex]);
 
   const currentConfig = exerciseLibrary[currentExercise.id];
 
@@ -71,7 +91,11 @@ const LiveSessionScreen = ({ navigation, route }) => {
         <Text className="text-white font-bold text-center text-m3-headline-medium">
           {appState === 'CALIBRATING' 
             ? "CALIBRATING" 
-            : (currentConfig.mode === 'reps' ? reps : `${seconds}s`)}
+            : (currentConfig?.mode === 'reps' 
+              ? `${reps} / ${currentExercise.value}`
+              : `${seconds}s / ${currentExercise.value}s`
+            )  
+          }
         </Text>
         <Text className="text-white text-center text-m3-body-small">
           {feedback}
