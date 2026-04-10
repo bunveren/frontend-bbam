@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import PressableAnimated from '../PressableAnimated';
@@ -15,6 +15,26 @@ const CardItem = ({
   onUpdateCount,
   exerciseCountType
 }) => {
+  const timerRef = useRef(null);
+
+  const handlePressIn = (direction) => {
+    onUpdateCount(direction);
+    
+    timerRef.current = setTimeout(() => {
+      timerRef.current = setInterval(() => {
+        onUpdateCount(direction);
+      }, 80);
+    }, 350);
+  };
+
+  const handlePressOut = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
   return (
     <PressableAnimated
       onPress={onPress}
@@ -40,12 +60,12 @@ const CardItem = ({
 
           {/* Dynamic Subtitle / Rep or Seconds Counter */}
           {variant === 'exerciseEdit' ? (
-            <View className='flex-row gap-2 items-center'>
-              <PressableAnimated onPress={() => onUpdateCount(-1)} hitSlop={15} transform>
+            <View className='flex-row gap-3 items-center'>
+              <PressableAnimated onPressIn={() => handlePressIn(-1)} onPressOut={handlePressOut} hitSlop={15} transform>
                 <Ionicons name='remove-circle-outline' size={20} color='#585AD1' />
               </PressableAnimated>
               <Text className='text-m3-body-small text-bbam-text-main'>{subtitle}</Text>
-              <PressableAnimated onPress={() => onUpdateCount(1)} hitSlop={15} transform>
+              <PressableAnimated onPressIn={() => handlePressIn(1)} onPressOut={handlePressOut} hitSlop={15} transform>
                 <Ionicons name='add-circle-outline' size={20} color='#585AD1' />
               </PressableAnimated>
               <Text className='pl-1 text-m3-body-small text-bbam-text-main'>{exerciseCountType}</Text>
