@@ -12,11 +12,11 @@ export const usePoseProcessor = (exerciseId) => {
   const [feedback, setFeedback] = useState("Stand in T-Pose to Start");
   const smoothedAnglesRef = useRef({});
   const timerRef = useRef(null);
-
-  const { data: exerciseLibrary } = useExerciseLibrary();
+  const tPoseFramesRef = useRef(0);
+  const calibrationTriggeredRef = useRef(false);
+  const { data: exerciseLibrary = {} } = useExerciseLibrary();
 
   useEffect(() => {
-    // Reset all states when next exercise is triggered
     setAppState('CALIBRATING');
     setReps(0);
     setSeconds(0);
@@ -33,26 +33,41 @@ export const usePoseProcessor = (exerciseId) => {
 
   const checkTPose = (landmarks) => {
     if (!landmarks[11] || !landmarks[12]) return false;
+    
     const leftArmAngle = calculateAngle3D(landmarks[11], landmarks[13], landmarks[15]);
     const rightArmAngle = calculateAngle3D(landmarks[12], landmarks[14], landmarks[16]);
-    const isUpright = landmarks[12].y < (landmarks[24]?.y || 1); 
 
-    return leftArmAngle > 160 && rightArmAngle > 160 && isUpright;
+    const isLeftHorizontal = Math.abs(landmarks[11].y - landmarks[15].y) < 0.2;
+    const isRightHorizontal = Math.abs(landmarks[12].y - landmarks[16].y) < 0.2;
+
+    const isUpright = landmarks[12].y < landmarks[24].y;
+
+    console.log({
+      angles: `${leftArmAngle}, ${rightArmAngle}`,
+      horizontal: `${isLeftHorizontal}, ${isRightHorizontal}`,
+      upright: isUpright
+    });
+
+    return leftArmAngle > 130 && rightArmAngle > 130 && isLeftHorizontal && isRightHorizontal && isUpright;
   };
 
   const processFrame = (landmarks) => {
     if (!landmarks) return;
-    if (appState === 'CALIBRATING') {
-      console.log({tpose: checkTPose(landmarks)});
+    if (!calibrationTriggeredRef.current && appState === 'CALIBRATING') {
       if (checkTPose(landmarks)) {
-        setAppState('WORKOUT');
-        setFeedback("Calibration Complete! Start.");
-        feedbackProvider.triggerVoiceOutput("Calibration complete. Start your exercise!");
-      }
+        tPoseFramesRef.current += 1;
+        if (tPoseFramesRef.current > 10 && !calibrationTriggeredRef.current) {
+          calibrationTriggeredRef.current = true;
+          setAppState('WORKOUT');
+          setFeedback("Calibration Complete! Start.");
+          feedbackProvider.triggerVoiceOutput("Calibration complete. Start your exercise!", 'INFO');
+        }
+      } else tPoseFramesRef.current = 0;
       return;
     }
 
     const config = exerciseLibrary[exerciseId];
+    //console.log(config);
     const evaluation = evaluateForm(landmarks, config);
     
     const primaryJoints = config.repConfig?.primaryJoints || config.holdConfig?.primaryJoints;

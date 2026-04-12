@@ -20,12 +20,28 @@ class FeedbackProvider {
     return "Looking good!";
   }
 
-  triggerVoiceOutput(message) {
+  triggerVoiceOutput(message, type = 'INFO') {
+    const now = Date.now();
+    if (type === 'COUNT') {
+      Speech.speak(message, {
+        language: 'en',
+        pitch: 1.0,
+        rate: 1.0,
+      });
+      return;
+    }
+
+    if (message === this.lastMessage && (now - this.lastSpokenTime < 3000)) {
+      return; 
+    }
+
     Speech.speak(message, {
       language: 'en',
       pitch: 1.0,
       rate: 1.0,
     });
+    this.lastSpokenTime = now;
+    this.lastMessage = message;
   }
 }
 

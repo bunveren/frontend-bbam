@@ -12,7 +12,7 @@ export const fetchExerciseLibraryFromApi = async () => {
     };
     return {
       ...acc,
-      [exercise.id]: mapped
+      [Integer(exercise.id)]: mapped
     };
   }, {});
 };

@@ -8,15 +8,20 @@ export const calculateAngle = (p1, p2, p3) => {
   return Math.round(angle); 
 };
 
-export const calculateEMA = (currentValue, previousValue, alpha = 0.3) => {
+export const calculateEMA = (currentValue, previousValue, alpha = 0.1) => { // 0.3 to 0.1 for more noise filtering
   if (previousValue === undefined || previousValue === null) return currentValue;
   return Math.round(alpha * currentValue + (1 - alpha) * previousValue);
 };
 
 export const calculateAngle3D = (p1, p2, p3) => {
   if (!p1 || !p2 || !p3) return 0;
-  const v1 = { x: p1.x - p2.x, y: p1.y - p2.y, z: (p1.z || 0) - (p2.z || 0) };
-  const v2 = { x: p3.x - p2.x, y: p3.y - p2.y, z: (p3.z || 0) - (p2.z || 0) };
+  const useDepth = (p1.visibility > 0.8 && p2.visibility > 0.8 && p3.visibility > 0.8);
+  const z1 = useDepth ? (p1.z || 0) : 0;
+  const z2 = useDepth ? (p2.z || 0) : 0;
+  const z3 = useDepth ? (p3.z || 0) : 0;
+
+  const v1 = { x: p1.x - p2.x, y: p1.y - p2.y, z: z1 - z2 };
+  const v2 = { x: p3.x - p2.x, y: p3.y - p2.y, z: z3 - z2 };
 
   const dotProduct = (v1.x * v2.x) + (v1.y * v2.y) + (v1.z * v2.z);
   const mag1 = Math.sqrt(v1.x**2 + v1.y**2 + v1.z**2);
@@ -29,16 +34,27 @@ export const calculateAngle3D = (p1, p2, p3) => {
 };
 
 export const mapMediaPipeToInternal = (rawLandmarks) => {
-  if (!rawLandmarks || !Array.isArray(rawLandmarks)) return {};
-
-  return rawLandmarks.map((landmark, index) => {
-    const res = {
-      x: landmark.x,
-      y: landmark.y,
-      z: landmark.z || 0,
-      visibility: landmark.visibility || landmark.presence || 0
-    };
-    return res;
+  return rawLandmarks.reduce((acc, landmark, index) => {
+    acc[index] = { x: landmark.x, y: landmark.y, z: landmark.z || 0, visibility: landmark.visibility || 0 };
+    return acc;
   }, {});
 };
 
+export const smoothLandmarks = (nextLandmarks, prevLandmarks, alpha = 0.2) => {
+  if (!prevLandmarks || Object.keys(prevLandmarks).length === 0) return nextLandmarks;
+  
+  const smoothed = {};
+  Object.keys(nextLandmarks).forEach(id => {
+    if (prevLandmarks[id]) {
+      smoothed[id] = {
+        x: alpha * nextLandmarks[id].x + (1 - alpha) * prevLandmarks[id].x,
+        y: alpha * nextLandmarks[id].y + (1 - alpha) * prevLandmarks[id].y,
+        z: nextLandmarks[id].z, // Z genellikle daha gürültülüdür, gerekirse buna da alpha uygulayın
+        visibility: nextLandmarks[id].visibility
+      };
+    } else {
+      smoothed[id] = nextLandmarks[id];
+    }
+  });
+  return smoothed;
+};
