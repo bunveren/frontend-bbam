@@ -69,8 +69,6 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
     });
   };
 
-  const calculateDuration = () => {};
-
   useEffect(() => {
     console.log(currentSchedule);
   }, [currentSchedule]);
@@ -111,7 +109,7 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
           </View>
           <View className="flex-1 bg-bbam-back-card py-4 rounded-3xl items-center justify-center h-24">
             <Ionicons name="time" size={24} color="#585AD1" />
-            <Text className="text-m3-title-small font-bold mt-1">{`${estimatedDuration} Minutes`}</Text>
+            <Text className="text-m3-title-small font-bold mt-1">{`${estimatedDuration} Minute${estimatedDuration < 2  ? '' : 's'}`}</Text>
           </View>
         </View>
 

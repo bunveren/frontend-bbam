@@ -19,15 +19,6 @@ const HomeScreen = ({ navigation }) => {
   const [workoutPlans, setWorkoutPlans] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
- /*  const workoutPlans = [
-    { id: '1', name: 'My Daily Workout', totalExercises: 5, estimatedDuration: 45 },
-    { id: '2', name: 'Legs', totalExercises: 4, estimatedDuration: 20 },
-    { id: '3', name: 'Arms', totalExercises: 3, estimatedDuration: 15 },
-    { id: '4', name: 'Test 1', totalExercises: 5, estimatedDuration: 45 },
-    { id: '5', name: 'Test 2', totalExercises: 4, estimatedDuration: 20 },
-    { id: '6', name: 'Test 3', totalExercises: 3, estimatedDuration: 15 },
-  ]; */
-
   const initials = useMemo(() => getInitials(userProfile), [userProfile]);
   const totalWorkouts = 0; // todo how to get these metrics
   const totalTimeSpent = 0;
@@ -123,7 +114,7 @@ const HomeScreen = ({ navigation }) => {
                   <CardItem 
                     key={workout.id}
                     title={workout.name}
-                    subtitle={`${workout.totalExercises} steps, ${workout.estimatedDuration} mins`}
+                    subtitle={`${workout.totalExercises} steps, ${workout.estimatedDuration} min${workout.estimatedDuration < 2 ? '' : 's'}`}
                     variant='workoutDisplay'
                     onPress={() => navigateToWorkoutDetails(workout)}
                   />
