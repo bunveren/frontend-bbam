@@ -180,13 +180,12 @@ const OnboardingScreen = ({ navigation }) => {
 
             if (userWantsNotifs) {
               await SecureStore.setItemAsync('notif_preference', 'enabled');
-              await registerDeviceWithBackend(data.user_id);
             } else {
               await SecureStore.setItemAsync('notif_preference', 'disabled');
             }
-          } else if (preference === 'enabled') {
-            await registerDeviceWithBackend(data.user_id);
           }
+
+          await registerDeviceWithBackend(data.user_id);
         }
       });
     }
@@ -230,18 +229,17 @@ const OnboardingScreen = ({ navigation }) => {
 
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
 
-      if (existingStatus === 'granted') {
-        await registerDeviceWithBackend(userId);
-      } else {
+      if (existingStatus !== 'granted') {
         const userWantsNotifs = await requestPermissionWithAlert();
 
         if (userWantsNotifs) {
           await SecureStore.setItemAsync('notif_preference', 'enabled');
-          await registerDeviceWithBackend(userId);
         } else {
           await SecureStore.setItemAsync('notif_preference', 'disabled');
         }
       }
+
+      await registerDeviceWithBackend(userId);
     
     } catch (err) {
       console.log({ setupErr: err });
