@@ -1,13 +1,15 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import * as SecureStore from 'expo-secure-store';
+import * as Notifications from 'expo-notifications';
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, Switch, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, Switch, TouchableOpacity, ScrollView, Alert, AppState } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Button from '../../components/Button';
 import TextInput from '../../components/TextInput';
 import { useUser, useUpdateProfile } from '../../hooks/useAuth';
 import { getInitials } from '../../utils/general';
+import { requestPermissionWithAlert } from '../../utils/notifications';
 
 const SectionTitle = ({ children }) => (
   <Text className='text-m3-label-large font-bold text-bbam-text-main mb-3'>
@@ -177,10 +179,87 @@ const ProfileSettingsScreen = ({ navigation }) => {
     // TODO later (silent push listener, etc.)
   };
 
-  const toggleNotifications = (enabled) => {
-    setNotificationsEnabled(enabled);
+  const toggleNotifications = async (enabled) => {
     // TODO later (update backend preference)
+    // TODO IMPORTANT - on notif cancel cases we run Notifications.cancelAllScheduledNotificationsAsync to cancel local notifs. when user enables notifs again, should we get reminders from backend and set local notifications again??
+    setNotificationsEnabled(enabled);
+    if (enabled) {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      console.log({existingStatus});
+      
+      if (existingStatus === 'granted') {
+        setNotificationsEnabled(true);
+        await SecureStore.setItemAsync('notif_preference', 'enabled');
+        return;
+      }
+
+      // If not granted, try requesting first
+      const { status: requestStatus } = await Notifications.requestPermissionsAsync();
+      
+      if (requestStatus !== 'granted') {
+        // User has previously blocked notifications, send to settings
+        const result = await requestPermissionWithAlert();
+        if (result === true) {
+          // User intends to turn off notifs (pressed on go to settings) but we dont know if they actually turned it on
+          // The AppState listener will catch them when they come back.
+          await SecureStore.setItemAsync('notif_preference', 'enabled');
+        } else {
+          setNotificationsEnabled(false);
+          await SecureStore.setItemAsync('notif_preference', 'disabled');
+          await Notifications.cancelAllScheduledNotificationsAsync();
+        }
+      } else {
+        setNotificationsEnabled(true);
+        await SecureStore.setItemAsync('notif_preference', 'enabled');
+      }
+    } else {
+
+      // Turning off is always immediate
+      setNotificationsEnabled(false);
+      await SecureStore.setItemAsync('notif_preference', 'disabled');
+      await Notifications.cancelAllScheduledNotificationsAsync();
+    }
   };
+
+  // helper method to sync system notification state with app's notification state
+  const refreshNotificationState = async () => {
+    const { status } = await Notifications.getPermissionsAsync();
+    const systemIsGranted = status === 'granted';
+    
+    const preference = await SecureStore.getItemAsync('notif_preference');
+    const userWantsNotifs = preference === 'enabled';
+
+    if (!systemIsGranted && userWantsNotifs) {
+      // user turned notifs off from system settings, but the app thinks it's on
+      // sync the app to off as well
+      setNotificationsEnabled(false);
+      await SecureStore.setItemAsync('notif_preference', 'disabled');
+      await Notifications.cancelAllScheduledNotificationsAsync();
+    } 
+    else if (systemIsGranted && userWantsNotifs) {
+      // Case: Everything matches.
+      setNotificationsEnabled(true);
+    }
+    else {
+      // user turned notifs off in the app.
+      // we can't programmatically turn off system notif settings so ignore that part
+      // even if system notif settings is granted, we keep the UI switch off.
+      setNotificationsEnabled(false);
+    }
+  };
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      // if the app comes back from the background/settings to the foreground
+      if (nextAppState === 'active') {
+        refreshNotificationState();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   const handleLogout = async () => {
     setErrorMessage({});
