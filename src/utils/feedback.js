@@ -20,7 +20,7 @@ class FeedbackProvider {
     return "Looking good!";
   }
 
-  triggerVoiceOutput(message, type = 'INFO') {
+  triggerVoiceOutput(message, type = 'INFO', onDoneCallback) {
     const now = Date.now();
     if (type === 'COUNT') {
       Speech.speak(message, {
@@ -39,6 +39,9 @@ class FeedbackProvider {
       language: 'en',
       pitch: 1.0,
       rate: 1.0,
+      onDone: () => {
+        if (onDoneCallback) onDoneCallback();
+      }
     });
     this.lastSpokenTime = now;
     this.lastMessage = message;

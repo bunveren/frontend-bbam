@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, useWindowDimensions } from 'react-native';
-import { RNMediapipe } from '@thinksys/react-native-mediapipe';
+import { RNMediapipe, switchCamera } from '@thinksys/react-native-mediapipe';
 import { Ionicons } from '@expo/vector-icons';
 import { Canvas, Points, vec } from '@shopify/react-native-skia';
 import { useSharedValue, useDerivedValue, runOnJS } from 'react-native-reanimated';
@@ -16,7 +16,7 @@ const LiveSessionScreen = ({ navigation, route }) => {
   const currentExercise = exerciseList[currentIndex] || {};
   
   const { width, height } = useWindowDimensions();
-  const { reps, seconds, feedback, appState, processFrame } = usePoseProcessor(currentExercise.id);
+  const { reps, seconds, feedback, appState, restCountdown, processFrame } = usePoseProcessor(currentExercise.id);
   const { data: exerciseLibrary = {} } = useExerciseLibrary();
 
   const landmarksSV = useSharedValue({});
@@ -99,16 +99,19 @@ const LiveSessionScreen = ({ navigation, route }) => {
         <TouchableOpacity accessibilityLabel="close-button" testID="close-button" onPress={() => navigation.goBack()} className="bg-white/20 p-3 rounded-full">
           <Ionicons name="close" size={28} color="white" />
         </TouchableOpacity>
+        <TouchableOpacity onPress={() => switchCamera()} className="bg-white/20 p-3 rounded-full">
+          <Ionicons name="camera-reverse-outline" size={28} color="white"></Ionicons>
+        </TouchableOpacity>
       </View>
       
-      <View className="absolute bottom-20 self-center bg-bbam-indigo-main/80 px-6 py-4 rounded-3xl">
-        <Text className="text-white font-bold text-center text-xl">
-          {appState === 'CALIBRATING' ? "CALIBRATING" : 
-            (currentConfig?.mode === 'reps' ? `${reps} / ${currentExercise.value}` : `${seconds}s / ${currentExercise.value}s`)
+      <View className="absolute bottom-20 self-center bg-bbam-indigo-main/80 px-6 py-4 rounded-3xl w-full">
+        <Text className="text-white font-bold text-center text-m3-headline-small">
+          {appState === 'CALIBRATING' ? "CALIBRATING" :
+            `${currentExercise.name}:   ${currentConfig?.mode === 'reps' ? `${reps} / ${currentExercise.value}` : `${seconds}s / ${currentExercise.value}s`}`
           }
         </Text>
-        <Text className="text-white text-center text-m3-body-small">
-          {feedback}
+        <Text className="text-white text-center text-m3-body-large">
+          {appState === 'WAITING' ? `Starting in ${restCountdown}...` : feedback}
         </Text>
       </View>
       
