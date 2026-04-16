@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch, Modal } from 'react-native';
+import { View, Text, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import CardItem from '../../components/CardItem';
 import Button from '../../components/Button';
 import PressableAnimated from '../../components/PressableAnimated';
 import ReminderSection from '../../components/ReminderSection';
 import { createSession } from '../../services/trackingService';
+import api from '../../api';
 
 const WorkoutDetailsScreen = ({ route, navigation }) => {
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
 
   // these are not on lld. used for the datetimepicker
   const [exerciseList, setExerciseList] = useState(null);
@@ -36,6 +39,33 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
   };
   const handleEditWorkout = () => {
     navigation.navigate('WorkoutEdit', { editMode: true, workout: { ...workoutPlan, exerciseList} });
+  };
+
+  const handleDeleteWorkout = () => {
+    Alert.alert(
+      "Delete Workout",
+      "Are you sure you want to delete this workout plan? This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive", 
+          onPress: async () => {
+            try {
+              await api.delete(`/workout/plans/${planId}/`);
+              
+              // Invalidate the list so the Home screen updates immediately
+              queryClient.invalidateQueries({ queryKey: ['workoutPlans'] });
+              
+              navigation.goBack();
+            } catch (error) {
+              console.error(error);
+              Alert.alert("Error", "Failed to delete the workout plan.");
+            }
+          } 
+        }
+      ]
+    );
   };
 
   const handleSetReminder = () => {
@@ -96,9 +126,17 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
             {workoutPlan.name}
           </Text>
           
-          <PressableAnimated onPress={handleEditWorkout} hitSlop={15} transform className="p-2 -mr-2">
-            <MaterialCommunityIcons name="pencil" size={30} color="#585AD1" />
-          </PressableAnimated>
+         <View className="flex-row items-center">
+            {/* Delete Button */}
+            <PressableAnimated onPress={handleDeleteWorkout} hitSlop={15} transform className="p-2">
+              <Ionicons name="trash-outline" size={26} color="#ED3241" />
+            </PressableAnimated>
+
+            {/* Edit Button */}
+            <PressableAnimated onPress={handleEditWorkout} hitSlop={15} transform className="p-2 -mr-2">
+              <MaterialCommunityIcons name="pencil" size={26} color="#585AD1" />
+            </PressableAnimated>
+          </View>
         </View>
 
         {/* Stats */}
