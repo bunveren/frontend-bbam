@@ -67,8 +67,8 @@ const ReminderSection = ({
     
     let dayText = frequency;
     if (frequency === 'Weekly') {
-      // reminderTime.getDay() gives the index 0-6
-      dayText = `Every ${DAYS[reminderTime.getDay()]}`;
+      // getDay() returns 0=Sun..6=Sat, DAYS array is 0=Mon..6=Sun → convert with (getDay()+6)%7
+      dayText = `Every ${DAYS[(reminderTime.getDay() + 6) % 7]}`;
     } else if (frequency === 'Once') {
       const month = MONTHS[reminderTime.getMonth()];
       const date = reminderTime.getDate();
@@ -84,8 +84,8 @@ const ReminderSection = ({
       frequency, // 'Daily', 'Weekly', 'Once'
       hour: reminderTime.getHours(),
       minute: reminderTime.getMinutes(),
-      // day index (0-6) for 'Weekly', full Date for 'Once'
-      day: frequency === 'Weekly' ? reminderTime.getDay() : null,
+      // day index (0=Mon..6=Sun) for 'Weekly', full Date for 'Once'
+      day: frequency === 'Weekly' ? (reminderTime.getDay() + 6) % 7 : null,
       date: frequency === 'Once' ? reminderTime : null,
       repeats: frequency !== 'Once',
     };
@@ -119,7 +119,7 @@ const ReminderSection = ({
 
       <Modal visible={isModalVisible} transparent animationType="fade" onRequestClose={closeModal}>
         <View className="flex-1 bg-black/50 justify-end">
-          <Pressable className="absolute inset-0" onPress={() => {closeModal}} />
+          <Pressable className="absolute inset-0" onPress={closeModal} />
           
           <Animated.View 
             style={{ transform: [{ translateY: slideAnim }] }}
@@ -140,15 +140,19 @@ const ReminderSection = ({
                 <Text className="text-m3-label-large font-bold text-bbam-text-light mb-3 ml-1">Select Day</Text>
                 <View className="flex-row justify-between">
                   {DAYS.map((day, index) => {
-                    const isSelected = reminderTime.getDay() === index;
+                    // getDay() returns 0=Sun..6=Sat, convert to DAYS index (0=Mon..6=Sun)
+                    const selectedDayIndex = (reminderTime.getDay() + 6) % 7;
+                    const isSelected = selectedDayIndex === index;
                     return (
                       <TouchableOpacity
                         key={day}
                         onPress={() => {
                           const newDate = new Date(reminderTime);
-                          // Adjust date to the next occurrence of this day
-                          const currentDay = reminderTime.getDay();
-                          const diff = index - currentDay;
+                          // Convert DAYS index back to JS day: (index+1)%7
+                          const targetJsDay = (index + 1) % 7;
+                          const currentJsDay = reminderTime.getDay();
+                          let diff = targetJsDay - currentJsDay;
+                          if (diff <= 0) diff += 7; // always go forward to next occurrence
                           newDate.setDate(reminderTime.getDate() + diff);
                           setReminderTime(newDate);
                         }}

@@ -18,8 +18,9 @@ const CardItem = ({
   const timerRef = useRef(null);
 
   const handlePressIn = (direction) => {
+    handlePressOut(); // clear any leaked timers before starting new ones
     onUpdateCount(direction);
-    
+
     timerRef.current = setTimeout(() => {
       timerRef.current = setInterval(() => {
         onUpdateCount(direction);

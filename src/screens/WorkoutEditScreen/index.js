@@ -1,23 +1,32 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback, useEffect } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import uuid from "react-native-uuid";
-import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CommonActions } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
-import * as Notifications from 'expo-notifications';
-import { useQueryClient } from '@tanstack/react-query';
+import DraggableFlatList, {
+  ScaleDecorator,
+} from "react-native-draggable-flatlist";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { CommonActions } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
+import * as Notifications from "expo-notifications";
+import { useQueryClient } from "@tanstack/react-query";
 
-import TextInput from '../../components/TextInput';
-import Button from '../../components/Button';
-import CardItem from '../../components/CardItem';
-import ReminderSection from '../../components/ReminderSection';
+import TextInput from "../../components/TextInput";
+import Button from "../../components/Button";
+import CardItem from "../../components/CardItem";
+import ReminderSection from "../../components/ReminderSection";
 
-import { useExerciseLibrary } from '../../hooks/useExerciseLibrary';
-import api from '../../api';
+import { useExerciseLibrary } from "../../hooks/useExerciseLibrary";
+import api from "../../api";
 
-import { mapWorkoutsToInternalStructure } from '../../utils/general';
-import exerciseRules from '../../utils/rules.json';
+import { mapWorkoutsToInternalStructure } from "../../utils/general";
+import exerciseRules from "../../utils/rules.json";
 
 const WorkoutEditScreen = ({ route, navigation }) => {
   const insets = useSafeAreaInsets();
@@ -30,13 +39,21 @@ const WorkoutEditScreen = ({ route, navigation }) => {
   const { id: planId } = workout;
   const [planName, setPlanName] = useState(editMode ? workout.name : "");
   const [initialExercises, setInitialExercises] = useState(
-    editMode ? JSON.stringify(workout.exerciseList) : "[]"
+    editMode ? JSON.stringify(workout.exerciseList) : "[]",
   );
   const [availableExercises, setAvailableExercises] = useState([]);
-  const [selectedExercises, setSelectedExercises] = useState(editMode ? workout.exerciseList.map(ex => ({ ...ex, instanceId: uuid.v4() })) : []);
-  const [isLocalAlarmScheduled, setIsLocalAlarmScheduled] = useState(workout?.isReminderEnabled || false);
-  const [currentSchedule, setCurrentSchedule] = useState(workout?.schedule || null);
-  const [reminderFrequency, setReminderFrequency] = useState('Daily');
+  const [selectedExercises, setSelectedExercises] = useState(
+    editMode
+      ? workout.exerciseList.map((ex) => ({ ...ex, instanceId: uuid.v4() }))
+      : [],
+  );
+  const [isLocalAlarmScheduled, setIsLocalAlarmScheduled] = useState(
+    workout?.isReminderEnabled || false,
+  );
+  const [currentSchedule, setCurrentSchedule] = useState(
+    workout?.schedule || null,
+  );
+  const [reminderFrequency, setReminderFrequency] = useState("Daily");
   const [reminderTime, setReminderTime] = useState(new Date());
   const [isLoading, setIsLoading] = useState(false);
 
@@ -56,13 +73,15 @@ const WorkoutEditScreen = ({ route, navigation }) => {
     const newEntry = {
       ...exercise,
       instanceId: uuid.v4(), // unique ID for draggable list
-      value: '1'
+      value: "1",
     };
     setSelectedExercises([...selectedExercises, newEntry]);
   };
 
   const removeExercise = useCallback((instanceId) => {
-    setSelectedExercises(prev => prev.filter(ex => ex.instanceId !== instanceId));
+    setSelectedExercises((prev) =>
+      prev.filter((ex) => ex.instanceId !== instanceId),
+    );
   }, []);
 
   const reorderExercises = (newData) => {
@@ -70,17 +89,19 @@ const WorkoutEditScreen = ({ route, navigation }) => {
   };
 
   const duplicateExercise = useCallback((instanceId) => {
-    const index = selectedExercises.findIndex(ex => ex.instanceId === instanceId);
+    const index = selectedExercises.findIndex(
+      (ex) => ex.instanceId === instanceId,
+    );
     if (index === -1) return;
 
     const originalItem = selectedExercises[index];
-    
+
     const clonedItem = {
       ...originalItem,
       instanceId: uuid.v4(),
     };
-    
-    setSelectedExercises(prev => {
+
+    setSelectedExercises((prev) => {
       const copy = [...prev];
       copy.splice(index + 1, 0, clonedItem);
       return copy;
@@ -88,16 +109,18 @@ const WorkoutEditScreen = ({ route, navigation }) => {
   }, []);
 
   const updateExerciseDetails = useCallback((instanceId, diff) => {
-    setSelectedExercises(prev => prev.map(ex => {
-      if (ex.instanceId === instanceId) {
-        const newValue = Math.max(1, parseInt(ex.value || 0) + diff);
-        return { 
-          ...ex, 
-          value: newValue.toString()
-        };
-      }
-      return ex;
-    }));
+    setSelectedExercises((prev) =>
+      prev.map((ex) => {
+        if (ex.instanceId === instanceId) {
+          const newValue = Math.max(1, parseInt(ex.value || 0) + diff);
+          return {
+            ...ex,
+            value: newValue.toString(),
+          };
+        }
+        return ex;
+      }),
+    );
   }, []);
 
   const scheduleLocalNotification = async () => {
@@ -106,34 +129,46 @@ const WorkoutEditScreen = ({ route, navigation }) => {
     await Notifications.cancelAllScheduledNotificationsAsync();
 
     let trigger;
-    if (currentSchedule.frequency === 'Daily') {
-      trigger = { hour: currentSchedule.hour, minute: currentSchedule.minute, repeats: true };
-    } else if (currentSchedule.frequency === 'Weekly') {
+    if (currentSchedule.frequency === "Daily") {
+      trigger = {
+        hour: currentSchedule.hour,
+        minute: currentSchedule.minute,
+        repeats: true,
+      };
+    } else if (currentSchedule.frequency === "Weekly") {
       // expo-notifications uses 1 for Sunday, 7 for Saturday. UI uses 0 for Monday, 6 for Sunday
-      trigger = { weekday: (currentSchedule.day === 6 ? 1 : currentSchedule.day + 2), hour: currentSchedule.hour, minute: currentSchedule.minute, repeats: true };
+      trigger = {
+        weekday: currentSchedule.day === 6 ? 1 : currentSchedule.day + 2,
+        hour: currentSchedule.hour,
+        minute: currentSchedule.minute,
+        repeats: true,
+      };
     } else {
       // One-time notification
       const triggerDate = new Date(currentSchedule.date);
       triggerDate.setHours(currentSchedule.hour, currentSchedule.minute, 0);
       trigger = triggerDate;
     }
-
     await Notifications.scheduleNotificationAsync({
       content: {
         title: "Workout Time! 🏋️‍♂️",
         body: `Ready for ${workoutPlan.name}?`,
         data: { planId: workoutPlan.id },
       },
-      trigger
+      trigger,
     });
   };
 
   const hasExercisesChanged = () => {
     const currentFormat = selectedExercises.map(({ instanceId, ...rest }) => ({
       ...rest,
-      value: Number(rest.value)
+      value: Number(rest.value),
     }));
-    console.log({ current: JSON.stringify(currentFormat), initial: initialExercises, isSame: JSON.stringify(currentFormat) === initialExercises });
+    console.log({
+      current: JSON.stringify(currentFormat),
+      initial: initialExercises,
+      isSame: JSON.stringify(currentFormat) === initialExercises,
+    });
     return JSON.stringify(currentFormat) !== initialExercises;
   };
 
@@ -164,17 +199,18 @@ const WorkoutEditScreen = ({ route, navigation }) => {
         isReminderEnabled: isLocalAlarmScheduled,
         schedule: currentSchedule,
       };
-      
+
       console.log("Saving Plan:", finalPlan);
 
       const exercisesChanged = hasExercisesChanged();
-      const payload = { plan_name: planName }
+      const payload = { plan_name: planName };
       if (exercisesChanged) {
         payload.items = selectedExercises.map((exercise, index) => ({
           exercise_id: exercise.id,
           step_order: index + 1,
-          [exercise.mode === 'reps' ? 'target_reps' : 'target_seconds']: exercise.value
-        }))
+          [exercise.mode === "reps" ? "target_reps" : "target_seconds"]:
+            exercise.value,
+        }));
       }
 
       //todo set notifications
@@ -182,30 +218,30 @@ const WorkoutEditScreen = ({ route, navigation }) => {
       if (editMode && planId) {
         response = await api.patch(`/workout/plans/${planId}/`, payload);
       } else {
-        response = await api.post('/workout/plans/', payload);
+        response = await api.post("/workout/plans/", payload);
       }
 
-      console.log({resp: response.data});
+      console.log({ resp: response.data });
       const newWorkoutData = mapWorkoutsToInternalStructure([response.data])[0];
       if (exercisesChanged && response.data.id !== planId) {
         setInitialExercises(newWorkoutData.exerciseList);
       }
 
-      queryClient.invalidateQueries({ queryKey: ['workoutPlans'] });
+      queryClient.invalidateQueries({ queryKey: ["workoutPlans"] });
       navigation.dispatch(
         CommonActions.reset({
           index: 1, // This makes the second item in 'routes' the active screen
           routes: [
-            { name: 'MainTabs' },
-            { 
-              name: 'WorkoutDetails',
+            { name: "MainTabs" },
+            {
+              name: "WorkoutDetails",
               params: {
                 workoutPlan: newWorkoutData,
-                fromEdit: true
-              }
+                fromEdit: true,
+              },
             },
-          ]
-        })
+          ],
+        }),
       );
     } catch (error) {
       console.log({ workoutSaveError: error });
@@ -215,36 +251,46 @@ const WorkoutEditScreen = ({ route, navigation }) => {
     }
   };
 
-  const renderItem = useCallback(({ item, drag, isActive }) => (
-    <ScaleDecorator>
-      <View
-        key={item.instanceId}
-        style={{
-          marginBottom: 8,
-          //paddingHorizontal: 24,
-          opacity: isActive ? 0.8 : 1
-        }}
-        testID='selected-exercise-card'
-      >
-        <CardItem
-          title={item.name}
-          subtitle={item.value}
-          exerciseCountType={item.mode === 'reps' ? 'Reps' : 'Seconds'}
-          variant="exerciseEdit"
-          onDelete={() => removeExercise(item.instanceId)}
-          onCopy={() => duplicateExercise(item.instanceId)}
-          onDrag={drag}
-          onUpdateCount={(diff) => updateExerciseDetails(item.instanceId, diff)}
-        />
-      </View>
-    </ScaleDecorator>
-  ), [removeExercise, duplicateExercise, updateExerciseDetails]);
+  const renderItem = useCallback(
+    ({ item, drag, isActive }) => (
+      <ScaleDecorator>
+        <View
+          key={item.instanceId}
+          style={{
+            marginBottom: 8,
+            //paddingHorizontal: 24,
+            opacity: isActive ? 0.8 : 1,
+          }}
+          testID="selected-exercise-card"
+        >
+          <CardItem
+            title={item.name}
+            subtitle={item.value}
+            exerciseCountType={item.mode === "reps" ? "Reps" : "Seconds"}
+            variant="exerciseEdit"
+            onDelete={() => removeExercise(item.instanceId)}
+            onCopy={() => duplicateExercise(item.instanceId)}
+            onDrag={drag}
+            onUpdateCount={(diff) =>
+              updateExerciseDetails(item.instanceId, diff)
+            }
+          />
+        </View>
+      </ScaleDecorator>
+    ),
+    [removeExercise, duplicateExercise, updateExerciseDetails],
+  );
 
   return (
-    <View className="flex-1 bg-bbam-back-page" style={{ paddingTop: insets.top }}>
-
+    <View
+      className="flex-1 bg-bbam-back-page"
+      style={{ paddingTop: insets.top }}
+    >
       <View className="px-6 flex-row items-center justify-between py-4">
-        <TouchableOpacity onPress={() => navigation.goBack()} className="p-2 -ml-2">
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          className="p-2 -ml-2"
+        >
           <Ionicons name="chevron-back" size={30} color="#585AD1" />
         </TouchableOpacity>
         <Text className="text-m3-headline-small font-bold text-bbam-text-main">
@@ -254,7 +300,6 @@ const WorkoutEditScreen = ({ route, navigation }) => {
       </View>
 
       <View style={{ flex: 1 }}>
-
         {/* Exercise Library  */}
         <View className="px-6 mb-4">
           <TextInput
@@ -272,12 +317,16 @@ const WorkoutEditScreen = ({ route, navigation }) => {
         <View className="h-64 max-h-64 mx-4 pb-4 border-b-[0.5px] border-[#D4D6DD]">
           {isLibLoading ? (
             <View className="flex-1 justify-center">
-              <ActivityIndicator color="#585AD1" size="large" className="mt-10" />
+              <ActivityIndicator
+                color="#585AD1"
+                size="large"
+                className="mt-10"
+              />
             </View>
           ) : (
             <ScrollView showsVerticalScrollIndicator>
               <View className="gap-2">
-                {availableExercises.map(ex => (
+                {availableExercises.map((ex) => (
                   <CardItem
                     key={`exercise-${ex.id}`}
                     title={ex.name}
@@ -286,7 +335,7 @@ const WorkoutEditScreen = ({ route, navigation }) => {
                   />
                 ))}
               </View>
-            </ScrollView>  
+            </ScrollView>
           )}
         </View>
 
@@ -299,23 +348,30 @@ const WorkoutEditScreen = ({ route, navigation }) => {
           <DraggableFlatList
             data={selectedExercises}
             onDragEnd={({ data }) => reorderExercises(data)}
-            keyExtractor={item => item.instanceId}
+            keyExtractor={(item) => item.instanceId}
             renderItem={renderItem}
-            contentContainerStyle={{ paddingBottom: 10, backgroundColor: '#F8FAFC' }}
+            contentContainerStyle={{
+              paddingBottom: 10,
+              backgroundColor: "#F8FAFC",
+            }}
             activationDistance={20}
             showsVerticalScrollIndicator={true}
             ListEmptyComponent={
               <View className="flex-1 items-center justify-center py-8 bg-white/30 rounded-2xl border border-dashed border-bbam-text-light/30">
-                <Ionicons name="fitness-outline" size={48} color="#9DA3A9" className="mb-2" />
+                <Ionicons
+                  name="fitness-outline"
+                  size={48}
+                  color="#9DA3A9"
+                  className="mb-2"
+                />
                 <Text className="text-m3-body-medium text-bbam-text-light text-center">
                   Add an exercise to get started
                 </Text>
               </View>
             }
-            testID='draggable-exercise-list'
+            testID="draggable-exercise-list"
           />
         </View>
-
       </View>
 
       <View
@@ -352,7 +408,6 @@ const WorkoutEditScreen = ({ route, navigation }) => {
           )}
         </View>
       </View>
-
     </View>
   );
 };
