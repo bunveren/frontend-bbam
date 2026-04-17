@@ -31,10 +31,12 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
   const loadWorkoutPlan = (planId) => {
     setExerciseList(workoutPlan.exerciseList || []);
   };
-  const handleStartWorkout = () => {
+  const handleStartWorkout = async () => {
     console.log('pressed Start Workout');
+    const { id: sessionId } = await createSession(planId, new Date());
     navigation.navigate('LiveSession', { 
-      exerciseList: exerciseList 
+      exerciseList: exerciseList,
+      sessionId
     });
   };
   const handleEditWorkout = () => {

@@ -10,8 +10,10 @@ import { usePoseProcessor } from '../../hooks/usePoseProcessor';
 import { useExerciseLibrary } from '../../hooks/useExerciseLibrary';
 import { feedbackProvider } from '../../utils/feedback';
 
+import { deleteSession } from '../../services/trackingService';
+
 const LiveSessionScreen = ({ navigation, route }) => {
-  const { exerciseList = [] } = route.params || {};
+  const { exerciseList = [], sessionId } = route.params || {};
   const [currentIndex, setCurrentIndex] = useState(0);
   const currentExercise = exerciseList[currentIndex] || {};
   const exerciseId = currentExercise.id || currentExercise._id;
@@ -76,8 +78,13 @@ const LiveSessionScreen = ({ navigation, route }) => {
       setCurrentIndex(prev => prev + 1);
       feedbackProvider.triggerVoiceOutput("Exercise complete! Get ready for the next one.");
     } else {
-      navigation.navigate('SessionSummary', { sessionId: route.params.sessionId });
+      navigation.navigate('SessionSummary', { sessionId });
     }
+  };
+
+  const handleExitWorkout = async () => {
+    await deleteSession(sessionId);
+    navigation.goBack();
   };
 
   useEffect(() => {
@@ -109,7 +116,7 @@ const LiveSessionScreen = ({ navigation, route }) => {
       />
 
       <View className="absolute top-12 left-6">
-        <TouchableOpacity accessibilityLabel="close-button" testID="close-button" onPress={() => navigation.goBack()} className="bg-white/20 p-3 rounded-full">
+        <TouchableOpacity accessibilityLabel="close-button" testID="close-button" onPress={handleExitWorkout} className="bg-white/20 p-3 rounded-full">
           <Ionicons name="close" size={28} color="white" />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => switchCamera()} className="bg-white/20 p-3 rounded-full">
