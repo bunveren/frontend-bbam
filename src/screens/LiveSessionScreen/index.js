@@ -14,9 +14,12 @@ const LiveSessionScreen = ({ navigation, route }) => {
   const { exerciseList = [] } = route.params || {};
   const [currentIndex, setCurrentIndex] = useState(0);
   const currentExercise = exerciseList[currentIndex] || {};
+  const exerciseId = currentExercise.id || currentExercise._id;
   
   const { width, height } = useWindowDimensions();
-  const { reps, seconds, feedback, appState, restCountdown, processFrame } = usePoseProcessor(currentExercise.id);
+  const aspectRatio = height / width;
+
+  const { reps, seconds, feedback, appState, restCountdown, processFrame } = usePoseProcessor(exerciseId, aspectRatio);
   const { data: exerciseLibrary = {} } = useExerciseLibrary();
 
   const landmarksSV = useSharedValue({});
@@ -25,6 +28,16 @@ const LiveSessionScreen = ({ navigation, route }) => {
   useEffect(() => {
     isCorrectSV.value = feedback === "Looking good!" || feedback === "Perfect!";
   }, [feedback]);
+
+  useEffect(() => {
+    if (exerciseList.length > 0) {
+      console.log("--- EXERCISE DATA DEBUG ---");
+      console.log("Full Object:", JSON.stringify(exerciseList[0], null, 2));
+      console.log("Keys available:", Object.keys(exerciseList[0]));
+    } else {
+      console.log("Exercise list is empty!");
+    }
+  }, [exerciseList]);
 
   const handleLandmarks = (data) => {
     const parsedData = JSON.parse(data);

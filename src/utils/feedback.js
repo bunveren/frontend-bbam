@@ -4,6 +4,7 @@ class FeedbackProvider {
   constructor() {
     this.lastFeedbackTime = 0;
     this.feedbackThreshold = 3000;
+    this.lastSpokenTime = 0; this.lastMessage = "";
   }
 
   processFeedback(evaluation) {

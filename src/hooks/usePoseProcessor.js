@@ -5,7 +5,7 @@ import { calculateEMA, calculateAngle3D, calculateAngle } from '../utils/poseMat
 import { feedbackProvider } from '../utils/feedback';
 import { getSideIds } from '../utils/ruleEngine';
 
-export const usePoseProcessor = (exerciseId) => {
+export const usePoseProcessor = (exerciseId, screenAspectRatio) => {
   const [appState, setAppState] = useState('CALIBRATING'); // 'CALIBRATING' | 'WORKOUT' | 'WAITING'
   const appStateRef = useRef('CALIBRATING'); // for some reason ui shows the change but the processFrame func is stuck with the old value (dont ask), we need this
   const [reps, setReps] = useState(0);
@@ -29,7 +29,6 @@ export const usePoseProcessor = (exerciseId) => {
   };
 
   const startTransitionCountdown = () => {
-    // Clear any existing countdowns
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     
     updateAppState('WAITING');
@@ -81,33 +80,47 @@ export const usePoseProcessor = (exerciseId) => {
     }
   }, [exerciseId]);
 
-  const checkTPose = (landmarks) => {
-    if (!landmarks[11] || !landmarks[12]) return false;
+  const checkTPose = (landmarks, aspectRatio = 1.7) => {
+    const criticalIds = [11, 12, 13, 14];
+    const isVisible = criticalIds.every(id => landmarks[id] && landmarks[id].visibility > 0.6);
+    if (!isVisible) return false;
     
-    const leftArmAngle = calculateAngle(landmarks[11], landmarks[13], landmarks[15]);
-    const rightArmAngle = calculateAngle(landmarks[12], landmarks[14], landmarks[16]);
+    const leftArmAngle = calculateAngle(landmarks[11], landmarks[13], landmarks[15], aspectRatio);
+    const rightArmAngle = calculateAngle(landmarks[12], landmarks[14], landmarks[16], aspectRatio);
 
-    const isLeftHorizontal = Math.abs(landmarks[11].y - landmarks[15].y) < 0.2;
-    const isRightHorizontal = Math.abs(landmarks[12].y - landmarks[16].y) < 0.2;
+    const isLeftHorizontal = Math.abs(landmarks[11].y - landmarks[15].y) < 0.15;
+    const isRightHorizontal = Math.abs(landmarks[12].y - landmarks[16].y) < 0.15;
 
     const isUpright = landmarks[12].y < landmarks[24].y;
-
-    console.log({
-      angles: `${leftArmAngle}, ${rightArmAngle}`,
-      horizontal: `${isLeftHorizontal}, ${isRightHorizontal}`,
-      upright: isUpright
-    });
-
-    return leftArmAngle > 130 && rightArmAngle > 130 && isLeftHorizontal && isRightHorizontal && isUpright;
+    return leftArmAngle > 150 && rightArmAngle > 150 && isLeftHorizontal && isRightHorizontal && isUpright;
   };
 
-  const processFrame = (landmarks) => {
+  const processFrame = (landmarks, fallbackRatio = 1.7) => {
+    const aspectRatio = screenAspectRatio || fallbackRatio;
     //console.log(`EX: ${exerciseId} | Mode: ${config.mode} | Angle: ${currentAngle} | Correct: ${evaluation.isCorrect} | State: ${motionStateRef.current}`);
     //if(!exerciseLibrary) console.log({exerciseLibrary});
     if (!landmarks) return;
 
     const currentAppState = appStateRef.current;
     const currentId = exerciseIdRef.current;
+    const config = libRef.current?.[currentId];
+    const visibilityValues = Object.values(landmarks).map(l => l.visibility || 0);
+    const highConfidencePoints = visibilityValues.filter(v => v > 0.6).length;
+
+    if (highConfidencePoints < 10 && currentAppState === 'WORKOUT') {
+      setFeedback("Body not visible - Paused");
+      
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+
+      if (motionStateRef.current !== 0) {
+        motionStateRef.current = 0;
+        setMotionState(0);
+      }
+      return;
+    }
 
     if (!calibrationTriggeredRef.current && currentAppState === 'CALIBRATING') {
       if (checkTPose(landmarks)) {
@@ -122,35 +135,36 @@ export const usePoseProcessor = (exerciseId) => {
     }
 
     //console.log({currentAppState});
-
-    if (currentAppState === 'WAITING') {
-      return;
-    }
+    if (currentAppState === 'WAITING') return;
 
     let evaluation = {};
     let currentAngle = 0;
     if (currentAppState === 'WORKOUT') {
-      const config = libRef.current?.[currentId];
       //console.log(config);
-      evaluation = evaluateForm(landmarks, config);
+      let evaluation = evaluateForm(landmarks, config);
       
-      const primaryJoints = config.repConfig?.primaryJoints || config.holdConfig?.primaryJoints;
+      const primaryJoints = config?.repConfig?.primaryJoints || config?.holdConfig?.primaryJoints; if (!primaryJoints) return;
 
       const leftSideJoints = getSideIds(primaryJoints, 'left');
       const rightSideJoints = getSideIds(primaryJoints, 'right');
 
-      // Calculate average visibility for both sides
       const leftVis = leftSideJoints.reduce((acc, id) => acc + (landmarks[id]?.visibility || 0), 0) / leftSideJoints.length;
       const rightVis = rightSideJoints.reduce((acc, id) => acc + (landmarks[id]?.visibility || 0), 0) / rightSideJoints.length;
-
-      // Choose the side with the highest visibility
       const bestSide = rightVis >= leftVis ? 'right' : 'left';
+      if (Math.max(leftVis, rightVis) < 0.5) { 
+        return { 
+          message: "Body not fully visible", 
+          isCorrect: false, 
+          errorType: 'VISIBILITY' 
+        }; 
+      }
       const dynamicJoints = bestSide === 'right' ? rightSideJoints : leftSideJoints;
       
       const rawAngle = calculateAngle(
         landmarks[dynamicJoints[0]],
         landmarks[dynamicJoints[1]],
-        landmarks[dynamicJoints[2]]
+        landmarks[dynamicJoints[2]],
+        aspectRatio
       );
       
       currentAngle = calculateEMA(rawAngle, smoothedAnglesRef.current[currentId]);
@@ -158,18 +172,27 @@ export const usePoseProcessor = (exerciseId) => {
       //console.log(`Angle: ${currentAngle} | State: ${motionStateRef.current} | Start: ${config.repConfig.startThreshold}`);
       // bicep curl 160 ama 145 olmalı, json&db degisecek
       if (config.mode === 'reps') {
-        console.log(`[DEBUG] Angle: ${currentAngle.toFixed(1)} | State: ${motionStateRef.current} | StartThreshold: ${config.repConfig.startThreshold} | Target: ${config.repConfig.midThreshold}`);
+        const isClosing = config.repConfig.startThreshold > config.repConfig.midThreshold;
+        
         if (evaluation.isCorrect) {
           const currentState = motionStateRef.current;
-          if (currentState === 0 && currentAngle > config.repConfig.startThreshold) {
+          const atStart = isClosing ? 
+            currentAngle > config.repConfig.startThreshold : 
+            currentAngle < config.repConfig.startThreshold;
+          
+          const atMid = isClosing ? 
+            currentAngle < config.repConfig.midThreshold : 
+            currentAngle > config.repConfig.midThreshold;
+          
+          if (currentState === 0 && atStart) {
             motionStateRef.current = 1;
             setMotionState(1);
           } 
-          else if (currentState === 1 && currentAngle < config.repConfig.midThreshold) {
+          else if (currentState === 1 && atMid) {
             motionStateRef.current = 2;
             setMotionState(2);
           } 
-          else if (currentState === 2 && currentAngle > config.repConfig.startThreshold) {
+          else if (currentState === 2 && atStart) {
             setReps(prev => {
               const newCount = prev + 1;
               feedbackProvider.triggerVoiceOutput(`${newCount}`);
@@ -178,17 +201,30 @@ export const usePoseProcessor = (exerciseId) => {
             motionStateRef.current = 1;
             setMotionState(1);
           }
+        } else {
+          if (motionStateRef.current !== 0) {
+            console.log("[DEBUG]: lost form");
+            motionStateRef.current = 0;
+            setMotionState(0);
+          }
         }
-      } 
-      else if (config.mode === 'hold') { // bu guncellemeyi denemedim
+      }
+      else if (config.mode === 'hold') {
         const primaryJoints = config.holdConfig?.primaryJoints;
-        let currentAngle = 0;
-
-        if (primaryJoints && landmarks[primaryJoints[0]]) {
-          const rawAngle = calculateAngle3D(
-            landmarks[primaryJoints[0]], 
-            landmarks[primaryJoints[1]], 
-            landmarks[primaryJoints[2]]
+        if (primaryJoints) {
+          const leftSide = getSideIds(primaryJoints, 'left');
+          const rightSide = getSideIds(primaryJoints, 'right');
+          
+          const leftVis = leftSide.reduce((acc, id) => acc + (landmarks[id]?.visibility || 0), 0) / leftSide.length;
+          const rightVis = rightSide.reduce((acc, id) => acc + (landmarks[id]?.visibility || 0), 0) / rightSide.length;
+          
+          const dynamicJoints = rightVis >= leftVis ? rightSide : leftSide;
+          
+          const rawAngle = calculateAngle(
+            landmarks[dynamicJoints[0]], 
+            landmarks[dynamicJoints[1]], 
+            landmarks[dynamicJoints[2]],
+            aspectRatio
           );
           currentAngle = calculateEMA(rawAngle, smoothedAnglesRef.current[currentId]);
           smoothedAnglesRef.current[currentId] = currentAngle;
@@ -209,12 +245,9 @@ export const usePoseProcessor = (exerciseId) => {
               setSeconds(prev => prev + 1);
             }, 1000);
           }
-        } 
-        else if (timerRef.current) {
-            console.warn(`Hold stopped: ${evaluation.message}`);
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-          
+        } else if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
         }
       }
 
