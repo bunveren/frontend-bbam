@@ -1,10 +1,11 @@
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Platform, Linking, Alert } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Platform, Linking, Alert, Modal } from "react-native";
 import * as Notifications from 'expo-notifications';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Button from "../../components/Button";
 import TextInput from "../../components/TextInput";
 
@@ -32,6 +33,7 @@ const OnboardingScreen = ({ navigation }) => {
   // extra fields you already had in UI
   const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
   const [acceptedPolicy, setAcceptedPolicy] = useState(false);
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
 
   // LLD attributes (not used for now, but exist)
   const [errorMessage, setErrorMessage] = useState({});
@@ -62,6 +64,7 @@ const OnboardingScreen = ({ navigation }) => {
     }
     setData();
   }, []);
+
 
   // ===== UI HELPERS =====
   const Divider = () => (
@@ -191,9 +194,7 @@ const OnboardingScreen = ({ navigation }) => {
     }
   };
 
-  const handleSignup = async () => {
-    if (!validateInputs()) return;
-
+  const doSignup = async () => {
     try {
       setIsLoading(true);
       const user = await register({
@@ -207,6 +208,24 @@ const OnboardingScreen = ({ navigation }) => {
       setIsLoading(false);
       setErrorMessage({ signup: "Signup failed." });
     }
+  };
+
+  const handleSignup = async () => {
+    if (!validateInputs()) return;
+
+    const alreadySeen = await AsyncStorage.getItem('disclaimer_seen');
+    if (alreadySeen !== '1') {
+      setShowDisclaimer(true);
+      return;
+    }
+
+    await doSignup();
+  };
+
+  const handleDisclaimerAccept = async () => {
+    await AsyncStorage.setItem('disclaimer_seen', '1');
+    setShowDisclaimer(false);
+    await doSignup();
   };
 
   const handleSetupComplete = async () => {
@@ -317,7 +336,7 @@ const OnboardingScreen = ({ navigation }) => {
                   </View>
                 )}
                 <Button
-                  title="Login"
+                  title="Sign In"
                   variant="primary"
                   onPress={handleLogin}
                   className="py-5"
@@ -416,9 +435,12 @@ const OnboardingScreen = ({ navigation }) => {
                     <Text className="text-white text-lg font-bold">✓</Text>
                   )}
                 </View>
-                <Text className="ml-4 text-m3-body-medium text-bbam-text-main">
+                <Text className="ml-4 text-m3-body-medium text-bbam-text-main flex-1">
                   By continuing, you agree to our{" "}
-                  <Text className="text-bbam-indigo-main font-bold">
+                  <Text
+                    className="text-bbam-indigo-main font-bold"
+                    onPress={() => navigation.navigate("PrivacyPolicy")}
+                  >
                     Privacy Policy
                   </Text>
                   .
@@ -597,6 +619,34 @@ const OnboardingScreen = ({ navigation }) => {
           )}
         </View>
       </ScrollView>
+
+      {/* Disclaimer — shown only until the user dismisses it once */}
+      <Modal visible={showDisclaimer} transparent animationType="fade">
+        <View className="flex-1 bg-black/60 items-center justify-center px-6">
+          <View className="bg-white rounded-3xl p-6 w-full shadow-xl">
+            <Text className="text-m3-headline-small font-bold text-bbam-text-main text-center mb-4">
+              ⚠️ Important Notice
+            </Text>
+            <Text className="text-m3-body-medium text-bbam-text-main text-center leading-6 mb-2">
+              Body & Beyond AI Mentor is a{" "}
+              <Text className="font-bold">fitness guidance tool</Text> and is{" "}
+              <Text className="font-bold">
+                not a medical or healthcare application.
+              </Text>
+            </Text>
+            <Text className="text-m3-body-medium text-bbam-text-light text-center leading-6 mb-6">
+              It does not provide medical advice, diagnosis, or treatment.
+              Always consult a qualified healthcare professional before
+              starting any new exercise programme.
+            </Text>
+            <Button
+              title="I Understand"
+              variant="primary"
+              onPress={handleDisclaimerAccept}
+            />
+          </View>
+        </View>
+      </Modal>
 
       <StatusBar style="auto" />
     </View>
