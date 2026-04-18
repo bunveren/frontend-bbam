@@ -6,6 +6,7 @@ import OnboardingScreen from '../screens/OnboardingScreen';
 import WorkoutDetailsScreen from '../screens/WorkoutDetailsScreen';
 import WorkoutEditScreen from '../screens/WorkoutEditScreen';
 import LiveSessionScreen from '../screens/LiveSessionScreen/index';
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 
 import { useUser } from '../hooks/useAuth';
 
@@ -27,7 +28,10 @@ const RootNavigator = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!isLoggedIn ? (
-        <Stack.Screen name="Login" component={OnboardingScreen} options={{ gestureEnabled: false }} />
+        <>
+          <Stack.Screen name="Login" component={OnboardingScreen} options={{ gestureEnabled: false }} />
+          <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ animation: 'slide_from_bottom' }} />
+        </>
       ) : (
         <>
           <Stack.Screen name="MainTabs" component={TabNavigator} options={{ gestureEnabled: false }} />
@@ -49,10 +53,11 @@ const RootNavigator = () => {
             }}
           />
           <Stack.Screen
-            name="LiveSession" 
-            component={LiveSessionScreen} 
+            name="LiveSession"
+            component={LiveSessionScreen}
             options={{ gestureEnabled: false }}
           />
+          <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ animation: 'slide_from_bottom' }} />
         </>
       )}
     </Stack.Navigator>

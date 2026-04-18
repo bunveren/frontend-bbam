@@ -540,7 +540,7 @@ const ProfileSettingsScreen = ({ navigation }) => {
                 <RowItem
                   icon="document-text-outline"
                   title="Privacy Policy"
-                  subtitle="Placeholder"
+                  subtitle="How we handle your data"
                   right={
                     <Ionicons
                       name="chevron-forward"
@@ -548,7 +548,7 @@ const ProfileSettingsScreen = ({ navigation }) => {
                       color="#9DA3A9"
                     />
                   }
-                  onPress={() => {}}
+                  onPress={() => navigation.navigate("PrivacyPolicy")}
                 />
               </Card>
 

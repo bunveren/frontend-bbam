@@ -23,6 +23,8 @@ import CardItem from "../../components/CardItem";
 import ReminderSection from "../../components/ReminderSection";
 
 import { useExerciseLibrary } from "../../hooks/useExerciseLibrary";
+import { useCreateReminder } from "../../hooks/useReminders";
+import { scheduleLocalNotification } from "../../utils/notifications";
 import api from "../../api";
 
 import { mapWorkoutsToInternalStructure } from "../../utils/general";
@@ -33,6 +35,7 @@ const WorkoutEditScreen = ({ route, navigation }) => {
   const queryClient = useQueryClient();
 
   const { data: library, isLoading: isLibLoading } = useExerciseLibrary();
+  const { mutateAsync: createReminder } = useCreateReminder();
 
   // LLD attributes
   const { editMode, workout = {} } = route.params || {};
@@ -213,7 +216,6 @@ const WorkoutEditScreen = ({ route, navigation }) => {
         }));
       }
 
-      //todo set notifications
       let response;
       if (editMode && planId) {
         response = await api.patch(`/workout/plans/${planId}/`, payload);
@@ -225,6 +227,20 @@ const WorkoutEditScreen = ({ route, navigation }) => {
       const newWorkoutData = mapWorkoutsToInternalStructure([response.data])[0];
       if (exercisesChanged && response.data.id !== planId) {
         setInitialExercises(newWorkoutData.exerciseList);
+      }
+
+      // schedule local notification first (always), then sync to backend (best-effort)
+      if (isLocalAlarmScheduled && currentSchedule) {
+        try {
+          await scheduleLocalNotification(currentSchedule, newWorkoutData.name, newWorkoutData.id);
+        } catch (e) {
+          console.log('[Reminder] local notification error:', e?.message);
+        }
+        try {
+          await createReminder({ planId: newWorkoutData.id, schedule: currentSchedule });
+        } catch (e) {
+          console.log('[Reminder] backend save skipped:', e?.response?.status ?? e?.message);
+        }
       }
 
       queryClient.invalidateQueries({ queryKey: ["workoutPlans"] });
