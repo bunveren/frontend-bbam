@@ -1,5 +1,7 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
+import * as Application from 'expo-application';
 
 const api = axios.create({
   // device ip on the current wireless network - add to .env file in the root folder
@@ -12,6 +14,8 @@ api.interceptors.request.use(async (config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  const uuid = Platform.OS === 'ios' ? await Application.getIosIdForVendorAsync() : Application.getAndroidId();
+  config.headers['X-Device-UUID'] = uuid;
   return config;
 });
 
