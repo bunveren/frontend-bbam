@@ -161,9 +161,9 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
           contentContainerClassName="flex-col gap-2"
           contentContainerStyle={{ paddingBottom: 20 }}
         >
-          {exerciseList?.map((item) => (
+          {exerciseList?.map((item, index) => (
             <CardItem 
-              key={item.id}
+              key={`${item.id}-${index}`}
               title={item.name}
               subtitle={`${item.value} ${item.mode === 'reps' ? 'Reps' : 'Seconds'}`}
               variant="exerciseDisplay"
