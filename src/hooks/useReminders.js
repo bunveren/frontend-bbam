@@ -20,6 +20,7 @@ export const useReminders = () =>
       const { data } = await api.get('/notifications/reminders/');
       return data;
     },
+    refetchInterval: 30 * 1000, // poll every 30s — ensures cross-device sync without relying on silent push
   });
 
 // Sends the reminder schedule to the backend and returns the created reminder object.

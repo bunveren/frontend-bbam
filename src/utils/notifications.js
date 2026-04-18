@@ -1,7 +1,21 @@
 import { Alert, Linking, Platform } from "react-native";
 import * as Notifications from "expo-notifications";
+import * as BackgroundTask from "expo-background-task";
+import * as TaskManager from "expo-task-manager";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../api";
+
+export const REMINDER_SYNC_TASK = "REMINDER_SYNC_BACKGROUND";
+
+// Define the task at module level — must be defined before App registers it
+TaskManager.defineTask(REMINDER_SYNC_TASK, async () => {
+  try {
+    await syncRemindersFromBackend();
+    return BackgroundTask.BackgroundTaskResult.Success;
+  } catch {
+    return BackgroundTask.BackgroundTaskResult.Failed;
+  }
+});
 
 const reminderKey = (planId) => `reminder_enabled_${planId}`;
 

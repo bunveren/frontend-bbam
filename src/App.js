@@ -6,16 +6,21 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Notifications from 'expo-notifications';
 import { useEffect, useRef } from 'react';
 import RootNavigator from './navigation/RootNavigator';
-import { syncRemindersFromBackend } from './utils/notifications';
+import { syncRemindersFromBackend, REMINDER_SYNC_TASK } from './utils/notifications';
+import { useReminders } from './hooks/useReminders';
+import * as BackgroundTask from 'expo-background-task';
+import * as TaskManager from 'expo-task-manager';
 import '../global.css';
 
-// Required: without this, notifications are silently dropped when the app is foregrounded
+// Suppress REMINDER_SYNC silent pushes, show everything else
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
+  handleNotification: async (notification) => {
+    const type = notification.request.content.data?.type;
+    if (type === 'REMINDER_SYNC') {
+      return { shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false };
+    }
+    return { shouldShowAlert: true, shouldPlaySound: true, shouldSetBadge: false };
+  },
 });
 
 // Android 8+ requires a notification channel — without this notifications never appear
@@ -37,6 +42,19 @@ const queryClient = new QueryClient({
   },
 });
 
+// Runs inside QueryClientProvider — polls reminders every 30s and reschedules local notifications
+function RemindersSync() {
+  const { data: reminders } = useReminders();
+
+  useEffect(() => {
+    if (reminders) {
+      syncRemindersFromBackend();
+    }
+  }, [reminders]);
+
+  return null;
+}
+
 export default function App() {
   let [fontsLoaded] = useFonts({
     Roboto_400Regular,
@@ -46,6 +64,15 @@ export default function App() {
   const appState = useRef(AppState.currentState);
 
   useEffect(() => {
+    // Register background fetch so syncRemindersFromBackend runs even when app is killed
+    TaskManager.isTaskRegisteredAsync(REMINDER_SYNC_TASK).then((registered) => {
+      if (!registered) {
+        BackgroundTask.registerTaskAsync(REMINDER_SYNC_TASK, {
+          minimumInterval: 15, // minutes — OS minimum
+        }).catch((e) => console.log('[BG] register failed:', e?.message));
+      }
+    });
+
     // Silent push listener: backend sends { type: 'REMINDER_SYNC' } to sync reminders across devices
     const notifSubscription = Notifications.addNotificationReceivedListener((notification) => {
       const { type } = notification.request.content.data || {};
@@ -79,9 +106,10 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
+        <RemindersSync />
         <NavigationContainer>
           <RootNavigator />
-        </NavigationContainer>   
+        </NavigationContainer>
       </QueryClientProvider>
     </GestureHandlerRootView>
   );
