@@ -127,7 +127,7 @@ const LiveSessionScreen = ({ navigation, route }) => {
     if (!isLastExercise) {
       setIsTransitioning(true);
       setCurrentIndex(prev => prev + 1);
-      feedbackProvider.triggerVoiceOutput("Exercise complete! Get ready for the next one.");
+      feedbackProvider.triggerVoiceOutput("Exercise complete!");
     } else {
       const endTime = new Date();
       const durationMinutes = Math.max(1, Math.round((endTime - statsRef.current.startTime) / 60000));

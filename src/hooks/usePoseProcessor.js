@@ -34,19 +34,25 @@ export const usePoseProcessor = (exerciseId, currentIndex, screenAspectRatio) =>
     updateAppState('WAITING');
     setRestCountdown(5);
     setFeedback("Get ready for the next exercise!");
-    feedbackProvider.triggerVoiceOutput("Next exercise coming up.", 'INFO');
+    const exerciseName = libRef.current?.[exerciseId]?.name || "Next exercise";
 
-    countdownIntervalRef.current = setInterval(() => {
-      setRestCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(countdownIntervalRef.current);
-          updateAppState('WORKOUT');
-          setFeedback("Go!");
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    feedbackProvider.triggerVoiceOutput(`${exerciseName} coming up.`, 'INFO', () => {
+      feedbackProvider.triggerVoiceOutput("5", 'COUNT');
+      countdownIntervalRef.current = setInterval(() => {
+        setRestCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownIntervalRef.current);
+            updateAppState('WORKOUT');
+            setFeedback("Go!");
+            feedbackProvider.triggerVoiceOutput("Start!", 'INFO');
+            return 0;
+          }
+          feedbackProvider.triggerVoiceOutput(String(prev - 1), 'COUNT');
+          return prev - 1;
+        });
+      }, 1000);
+    });
+    
   };
 
   useEffect(() => {
