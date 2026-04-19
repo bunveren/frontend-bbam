@@ -206,6 +206,7 @@ const OnboardingScreen = ({ navigation }) => {
       switchView("setup");
     } catch (err) {
       setIsLoading(false);
+      console.log({err})
       setErrorMessage({ signup: "Signup failed." });
     }
   };

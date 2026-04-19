@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, useWindowDimensions, ActivityIndicator } from 'react-native';
+import { CommonActions } from '@react-navigation/native';
 import { RNMediapipe, switchCamera } from '@thinksys/react-native-mediapipe';
 import { Ionicons } from '@expo/vector-icons';
 import { Canvas, Points, vec } from '@shopify/react-native-skia';
@@ -13,7 +14,7 @@ import { feedbackProvider } from '../../utils/feedback';
 import { deleteSession, endSession } from '../../services/trackingService';
 
 const LiveSessionScreen = ({ navigation, route }) => {
-  const { exerciseList = [], sessionId } = route.params || {};
+  const { exerciseList = [], sessionId, planName } = route.params || {};
   const [currentIndex, setCurrentIndex] = useState(0);
   const currentExercise = exerciseList[currentIndex] || {};
   const exerciseId = currentExercise.id || currentExercise._id;
@@ -21,7 +22,7 @@ const LiveSessionScreen = ({ navigation, route }) => {
   const { width, height } = useWindowDimensions();
   const aspectRatio = height / width;
 
-  const { reps, seconds, feedback, appState, restCountdown, processFrame, stopProcessor } = usePoseProcessor(exerciseId, currentIndex, aspectRatio);
+  const { reps, seconds, feedback, appState, appStateRef, restCountdown, processFrame, stopProcessor } = usePoseProcessor(exerciseId, currentIndex, aspectRatio);
   const { data: exerciseLibrary = {} } = useExerciseLibrary();
 
   const landmarksSV = useSharedValue({});
@@ -63,7 +64,8 @@ const LiveSessionScreen = ({ navigation, route }) => {
       const result = processFrame(internalLandmarks);
 
       // collect stats for current exercise
-      if (appState === 'WORKOUT' && result?.evaluation) {
+      console.log({app: appStateRef.current, result});
+      if (appStateRef.current === 'WORKOUT' && result?.evaluation) {
         const { isCorrect, message, errorType } = result.evaluation;
         
         statsRef.current.currentStats.totalFrames += 1;
@@ -72,6 +74,7 @@ const LiveSessionScreen = ({ navigation, route }) => {
         } else if (message && message !== "Looking good!" && message !== "Perfect!") {
           statsRef.current.currentStats.errors.add(message);
         }
+        console.log({totalFrames: statsRef.current.currentStats.totalFrames, correctFrames: statsRef.current.currentStats.correctFrames});
       }
     }
   };
@@ -130,6 +133,7 @@ const LiveSessionScreen = ({ navigation, route }) => {
       const durationMinutes = Math.max(1, Math.round((endTime - statsRef.current.startTime) / 60000));
 
       const finalPayload = {
+        plan_name: planName,
         duration_minutes: durationMinutes,
         exercises: statsRef.current.completedExercises
       };
@@ -138,12 +142,24 @@ const LiveSessionScreen = ({ navigation, route }) => {
       stopProcessor();
 
       try {
-        console.log({ finalStats: finalPayload.exercises, duration: finalPayload.duration_minutes });
-        //await endSession(sessionId, finalPayload);
+        console.log({ errors: finalPayload.exercises[0]?.common_errors,finalStats: finalPayload.exercises, duration: finalPayload.duration_minutes });
+        await endSession(sessionId, finalPayload);
       } catch (e) {
         console.error("Failed to save session results:", e);
       }
-      //navigation.navigate('SessionSummary', { sessionId });
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [
+            { 
+              name: 'MainTabs', 
+              state: {
+                routes: [{ name: 'Progress', params: { sessionId } }]
+              }
+            },
+          ],
+        })
+      );
     }
   };
 
@@ -171,51 +187,62 @@ const LiveSessionScreen = ({ navigation, route }) => {
 
   return (
     <View className="flex-1 bg-black">
-      <RNMediapipe
-        style={StyleSheet.absoluteFill}
-        onLandmark={handleLandmarks}
-        modelComplexity={2} 
-        minDetectionConfidence={0.7}
-        minTrackingConfidence={0.7}
-        face={false}
-        leftArm={true}
-        rightArm={true}
-        leftWrist={true}
-        rightWrist={true}
-        torso={true}
-        leftLeg={true}
-        rightLeg={true}
-        leftAnkle={true}
-        rightAnkle={true}
-      />
+      {!isSessionEndedRef.current ? (
+        <>
+          <RNMediapipe
+            style={StyleSheet.absoluteFill}
+            onLandmark={handleLandmarks}
+            modelComplexity={2} 
+            minDetectionConfidence={0.7}
+            minTrackingConfidence={0.7}
+            face={false}
+            leftArm={true}
+            rightArm={true}
+            leftWrist={true}
+            rightWrist={true}
+            torso={true}
+            leftLeg={true}
+            rightLeg={true}
+            leftAnkle={true}
+            rightAnkle={true}
+          />
 
-      <View className="absolute top-12 left-6">
-        <TouchableOpacity accessibilityLabel="close-button" testID="close-button" onPress={handleExitWorkout} className="bg-white/20 p-3 rounded-full">
-          <Ionicons name="close" size={28} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => switchCamera()} className="bg-white/20 p-3 rounded-full">
-          <Ionicons name="camera-reverse-outline" size={28} color="white"></Ionicons>
-        </TouchableOpacity>
-      </View>
+          <View className="absolute top-12 left-6">
+            <TouchableOpacity accessibilityLabel="close-button" testID="close-button" onPress={handleExitWorkout} className="bg-white/20 p-3 rounded-full">
+              <Ionicons name="close" size={28} color="white" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => switchCamera()} className="bg-white/20 p-3 rounded-full">
+              <Ionicons name="camera-reverse-outline" size={28} color="white"></Ionicons>
+            </TouchableOpacity>
+          </View>
 
-      <View className="absolute top-12 right-6 z-50" style={{ zIndex: 999, elevation: 10 }}>
-        <TouchableOpacity 
-          onPress={handleNextExercise} 
-          className="bg-red-600 px-4 py-3 rounded-full">
-          <Text className="text-white font-bold">Skip (Debug)</Text>
-        </TouchableOpacity>
-      </View>
+          <View className="absolute top-12 right-6 z-50" style={{ zIndex: 999, elevation: 10 }}>
+            <TouchableOpacity 
+              onPress={handleNextExercise} 
+              className="bg-red-600 px-4 py-3 rounded-full">
+              <Text className="text-white font-bold">Skip (Debug)</Text>
+            </TouchableOpacity>
+          </View>
 
-      <View className="absolute bottom-20 self-center bg-bbam-indigo-main/80 px-6 py-4 rounded-3xl w-full">
-        <Text className="text-white font-bold text-center text-m3-headline-small">
-          {appState === 'CALIBRATING' ? "CALIBRATING" :
-            `${currentExercise.name}:   ${currentConfig?.mode === 'reps' ? `${reps} / ${currentExercise.value}` : `${seconds}s / ${currentExercise.value}s`}`
-          }
-        </Text>
-        <Text className="text-white text-center text-m3-body-large">
-          {appState === 'WAITING' ? `Starting in ${restCountdown}...` : feedback}
-        </Text>
-      </View>
+          <View className="absolute bottom-20 self-center bg-bbam-indigo-main/80 px-6 py-4 rounded-3xl w-full">
+            <Text className="text-white font-bold text-center text-m3-headline-small">
+              {appState === 'CALIBRATING' ? "CALIBRATING" :
+                `${currentExercise.name}:   ${currentConfig?.mode === 'reps' ? `${reps} / ${currentExercise.value}` : `${seconds}s / ${currentExercise.value}s`}`
+              }
+            </Text>
+            <Text className="text-white text-center text-m3-body-large">
+              {appState === 'WAITING' ? `Starting in ${restCountdown}...` : feedback}
+            </Text>
+          </View> 
+        </>
+      ) : (
+        <View style={StyleSheet.absoluteFill} className="bg-bbam-back-page items-center justify-center z-[9999]">
+          <ActivityIndicator size="large" color="#585AD1" />
+          <Text className="text-bbam-text-main mt-4 text-m3-body-large font-bold">
+            Analyzing your workout session...
+          </Text>
+        </View>
+      )}
       
     </View>
   );

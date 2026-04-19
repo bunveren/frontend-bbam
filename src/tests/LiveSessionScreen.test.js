@@ -267,7 +267,7 @@ describe('LiveSessionScreen - in session tests', () => {
     };
 
     render(<LiveSessionScreen navigation={mockNavigation} route={singleExerciseRoute} />);
-    expect(mockNavigation.navigate).toHaveBeenCalledWith('SessionSummary', { sessionId: 123 });
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('Progress', { sessionId: 123 });
   });
 
   test('ST-14: useposeprocessor must be invoked by new id when an exercise is done', () => {

@@ -5,14 +5,17 @@ import { Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import CardItem from '../../components/CardItem';
 import Button from '../../components/Button';
+
 import { useUser } from '../../hooks/useAuth';
 import { useWorkoutPlans } from '../../hooks/useWorkoutPlans';
+import { useSessions } from '../../hooks/useSessions';
 import { getInitials } from '../../utils/general';
 
 const HomeScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { data: userData } = useUser();
   const { data: plans, isLoading: isWorkoutLoading, isError, error, refetch } = useWorkoutPlans();
+  const { data: sessions, isLoading: isSessionsLoading } = useSessions();
 
   // mock attributes and methods according to lld
   const [userProfile, setUserProfile] = useState({});
@@ -20,8 +23,17 @@ const HomeScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const initials = useMemo(() => getInitials(userProfile), [userProfile]);
-  const totalWorkouts = 0; // todo how to get these metrics
-  const totalTimeSpent = 0;
+  const stats = useMemo(() => {
+    if (!sessions || sessions.length === 0) {
+      return { totalWorkouts: 0, totalTimeSpent: 0 };
+    }
+    const filteredSessions = sessions.filter(s => s.status === 'completed');
+    const count = filteredSessions.length;
+    const totalMinutes = filteredSessions.reduce((acc, s) => acc + (s.duration_minutes || 0), 0);
+    const hours = (totalMinutes / 60).toFixed(1);
+
+    return { totalWorkouts: count, totalTimeSpent: hours };
+  }, [sessions]);
 
   const loadWorkoutPlans = async () => {
     setIsLoading(true);
@@ -85,12 +97,12 @@ const HomeScreen = ({ navigation }) => {
         <View className="flex-row gap-4 pb-10 border-b-[0.5px] border-[#D4D6DD]">
           <View className="flex-1 bg-bbam-back-card p-4 rounded-3xl items-center justify-center h-32">
             <MaterialCommunityIcons name='arm-flex' size={24} color="#585AD1" />
-            <Text className="text-m3-title-small font-bold mt-2">{`${totalWorkouts} Workouts`}</Text>
+            <Text className="text-m3-title-small font-bold mt-2">{`${stats.totalWorkouts} Workouts`}</Text>
             <Text className="text-m3-title-small font-bold text-bbam-text-light">Completed</Text>
           </View>
           <View className="flex-1 bg-bbam-back-card p-4 rounded-3xl items-center justify-center h-32">
             <Ionicons name="time" size={24} color="#585AD1" />
-            <Text className="text-m3-title-small font-bold mt-2">{`${totalTimeSpent} Hours`}</Text>
+            <Text className="text-m3-title-small font-bold mt-2">{`${stats.totalTimeSpent} Hours`}</Text>
             <Text className="text-m3-title-small font-bold text-bbam-text-light">Time Spent</Text>
           </View>
         </View>

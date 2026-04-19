@@ -5,18 +5,20 @@ import {
   ActivityIndicator,
   ScrollView,
   TouchableOpacity,
-  FlatList,
+  SectionList,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { getFeedback, getSessionHistory } from "../../services/trackingService";
+import { getSessionHistory, getSessionExercises } from "../../services/trackingService";
 import PressableAnimated from "../../components/PressableAnimated";
+
+import { useExerciseLibrary } from "../../hooks/useExerciseLibrary";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const formatDate = (dateStr) => {
   if (!dateStr) return "";
   const d = new Date(dateStr);
-  return d.toLocaleDateString("tr-TR", {
+  return d.toLocaleDateString("en-US", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -227,9 +229,10 @@ const SectionTitle = ({ children }) => (
 // ─── Session Detail View ──────────────────────────────────────────────────────
 const SessionDetail = ({ session, onBack }) => {
   const insets = useSafeAreaInsets();
-  const [feedbackLoading, setFeedbackLoading] = useState(true);
-  const [aiComment, setAiComment] = useState("");
-  const [feedbackError, setFeedbackError] = useState("");
+  const [sessionExercises, setSessionExercises] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const { data: exerciseLibrary = {} } = useExerciseLibrary();
 
   const accuracy = session.overall_accuracy_score
     ? Math.round(session.overall_accuracy_score)
@@ -242,24 +245,30 @@ const SessionDetail = ({ session, onBack }) => {
     { name: "Push-Up", accuracy: 78, reps: 32, errors: ["Hips sagging", "Elbow flare"] },
   ];
 
-  // Mock common errors — replace with session summary data from backend
-  const mockCommonErrors = ["hips_sagging", "back_rounding"];
-
   useEffect(() => {
-    const fetchFeedback = async () => {
+    const fetchDetails = async () => {
       try {
-        setFeedbackLoading(true);
-        const data = await getFeedback(session.id);
-        setAiComment(data.ai_comment || "Great session! Keep pushing forward.");
+        setLoading(true);
+        const data = await getSessionExercises(session.id);
+        console.log({sessionexercises: data});
+        setSessionExercises(data);
       } catch (err) {
-        setFeedbackError(err.message);
+        console.error("Failed to fetch exercises:", err);
       } finally {
-        setFeedbackLoading(false);
+        setLoading(false);
       }
     };
-
-    fetchFeedback();
+    fetchDetails();
   }, [session.id]);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#F7F9FA" }}>
+        <ActivityIndicator size="large" color="#585AD1" />
+        <Text style={{ marginTop: 12, color: "#9DA3A9" }}>Loading exercise data...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F7F9FA", paddingTop: insets.top }}>
@@ -315,12 +324,12 @@ const SessionDetail = ({ session, onBack }) => {
             />
             <StatCard
               icon="repeat-outline"
-              value={mockExercises.reduce((s, e) => s + (e.reps || 0), 0)}
+              value={sessionExercises?.reduce((s, e) => s + (e.completed_reps || 0), 0)}
               label="Total Reps"
             />
             <StatCard
               icon="barbell-outline"
-              value={mockExercises.length}
+              value={sessionExercises?.length}
               label="Exercises"
             />
           </View>
@@ -329,33 +338,20 @@ const SessionDetail = ({ session, onBack }) => {
         {/* Exercise Breakdown */}
         <Card style={{ gap: 18 }}>
           <SectionTitle>Exercise Breakdown</SectionTitle>
-          {mockExercises.map((ex, i) => (
+          {sessionExercises?.map((ex, i) => (
             <React.Fragment key={i}>
               <ExerciseBar
-                name={ex.name}
-                accuracy={ex.accuracy}
-                reps={ex.reps}
-                seconds={ex.seconds}
-                errors={ex.errors}
+                name={exerciseLibrary[ex.exercise]?.name || `Exercise ${ex.step_order}`}
+                accuracy={ex.accuracy_score}
+                reps={ex.completed_reps}
+                seconds={ex.completed_seconds}
               />
-              {i < mockExercises.length - 1 && (
+              {i < sessionExercises?.length - 1 && (
                 <View style={{ height: 1, backgroundColor: "#F0F4F8" }} />
               )}
             </React.Fragment>
           ))}
         </Card>
-
-        {/* Areas to Improve */}
-        {mockCommonErrors.length > 0 && (
-          <Card style={{ gap: 14 }}>
-            <SectionTitle>Areas to Improve</SectionTitle>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {mockCommonErrors.map((e, i) => (
-                <ErrorChip key={i} label={e} />
-              ))}
-            </View>
-          </Card>
-        )}
 
         {/* AI Coach Feedback */}
         <View
@@ -380,21 +376,65 @@ const SessionDetail = ({ session, onBack }) => {
             </Text>
           </View>
 
-          {feedbackLoading ? (
-            <ActivityIndicator color="rgba(255,255,255,0.8)" />
-          ) : feedbackError ? (
-            <Text style={{ fontSize: 14, color: "rgba(255,255,255,0.65)", lineHeight: 20 }}>
-              Could not load feedback for this session.
+          {session?.summary_json?.ai_summary ? (
+            <Text style={{ fontSize: 15, color: "#fff", lineHeight: 23, opacity: 0.95 }}>
+              {session?.summary_json?.ai_summary}
             </Text>
           ) : (
-            <Text style={{ fontSize: 15, color: "#fff", lineHeight: 23, opacity: 0.95 }}>
-              {aiComment}
+            <Text style={{ fontSize: 14, color: "rgba(255,255,255,0.65)", lineHeight: 20 }}>
+              Could not load feedback for this session.
             </Text>
           )}
         </View>
       </ScrollView>
     </View>
   );
+};
+
+const SectionHeader = ({ title, sessionCount, isExpanded, onToggle }) => (
+  <TouchableOpacity 
+    onPress={onToggle}
+    activeOpacity={0.7}
+    style={{ 
+      backgroundColor: "#F7F9FA",
+      paddingVertical: 12, 
+      marginTop: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between' // Push icon to the right
+    }}
+  >
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <View style={{ width: 4, height: 24, backgroundColor: '#585AD1', borderRadius: 2 }} />
+      <Text style={{ fontSize: 16, fontWeight: "700", color: "#263238" }}>{title}</Text>
+      <Text style={{ fontSize: 16, color: "#9DA3A9", fontWeight: '500' }}>({sessionCount})</Text>
+    </View>
+    
+    <Ionicons 
+      name={isExpanded ? "chevron-up" : "chevron-down"} 
+      size={20} 
+      color="#9DA3A9" 
+    />
+  </TouchableOpacity>
+);
+
+const groupSessionsByPlan = (sessions) => {
+  const groups = sessions.reduce((acc, session) => {
+    const planId = session.plan;
+    const planName = session.plan_name || "Unnamed Workout";
+
+    if (!acc[planId]) {
+      acc[planId] = {
+        planId,
+        title: planName,
+        data: [],
+      };
+    }
+    acc[planId].data.push(session);
+    return acc;
+  }, {});
+
+  return Object.values(groups);
 };
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
@@ -405,13 +445,33 @@ const ProgressScreen = ({ route }) => {
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState("");
   const [selectedSession, setSelectedSession] = useState(null);
+  const [expandedSections, setExpandedSections] = useState({});
+
+  const sectionedData = React.useMemo(() => {
+    const groups = groupSessionsByPlan(sessions);
+    console.log({groups});
+    
+    return groups.map(section => ({
+      ...section,
+      // If true, show data. If undefined/false, show empty array.
+      data: expandedSections[section.planId] ? section.data : []
+    }));
+  }, [sessions, expandedSections]);
+
+  const toggleSection = (planId) => {
+    console.log({expandedSections});
+    setExpandedSections(prev => ({
+      ...prev,
+      [planId]: !prev[planId] // Toggle the boolean
+    }));
+  };
 
   const fetchSessions = useCallback(async () => {
     try {
       setListLoading(true);
       const data = await getSessionHistory();
       const sorted = [...data].sort(
-        (a, b) => new Date(b.session_date) - new Date(a.session_date)
+        (a, b) => new Date(b.ended_at) - new Date(a.ended_at)
       );
       setSessions(sorted);
     } catch (err) {
@@ -469,19 +529,28 @@ const ProgressScreen = ({ route }) => {
           <EmptyState />
         </View>
       ) : (
-        <FlatList
-          data={sessions}
+        <SectionList
+          sections={sectionedData}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={{
             paddingHorizontal: 24,
             paddingBottom: insets.bottom + 32,
-            gap: 10,
           }}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
-            <SessionListItem
-              session={item}
-              onPress={() => setSelectedSession(item)}
+            <View style={{ marginBottom: 10 }}>
+              <SessionListItem
+                session={item}
+                onPress={() => setSelectedSession(item)}
+              />
+            </View>
+          )}
+          renderSectionHeader={({ section }) => (
+            <SectionHeader 
+              title={section.title} 
+              sessionCount={sessions.filter(s => s.plan === section.planId).length} 
+              isExpanded={!!expandedSections[section.planId]}
+              onToggle={() => toggleSection(section.planId)}
             />
           )}
         />

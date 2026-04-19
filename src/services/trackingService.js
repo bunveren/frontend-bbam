@@ -1,6 +1,6 @@
 import api from '../api';
 
-export const createSession = async (planId, startTime) => {
+export const createSession = async (planId, planName, startTime) => {
   const formattedStartTime = startTime instanceof Date 
     ? startTime.toISOString() 
     : startTime;
@@ -10,6 +10,7 @@ export const createSession = async (planId, startTime) => {
 
   const { data } = await api.post('/tracking/sessions/', {
     ...(planId && { plan: planId }),
+    ...(planName && { plan_name: planName }),
     ...(formattedDate && { session_date: formattedDate }),
     ...(formattedStartTime && { started_at: formattedStartTime })
   });
@@ -17,8 +18,13 @@ export const createSession = async (planId, startTime) => {
 };
 
 export const endSession = async (sessionId, payload) => {
-  const { data } = await api.post(`/tracking/sessions/${sessionId}/end/`, payload);
-  return data;
+  try {
+    const { data } = await api.post(`/tracking/sessions/${sessionId}/end/`, payload);
+    return data;
+  } catch (error) {
+    console.error("Error ending session:", error.message);
+  }
+  
 };
 
 export const deleteSession = async (sessionId) => {
@@ -35,7 +41,7 @@ export const getSessionHistory = async () => {
   return data;
 };
 
-export const getFeedback = async (sessionId) => {
-  const { data } = await api.get(`/feedback/?session_id=${sessionId}`);
+export const getSessionExercises = async (sessionId) => {
+  const { data } = await api.get(`/tracking/sessions/${sessionId}/exercises/`);
   return data;
 };

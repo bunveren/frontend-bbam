@@ -187,7 +187,7 @@ export const usePoseProcessor = (exerciseId, currentIndex, screenAspectRatio) =>
       currentAngle = calculateEMA(bestData.angle, smoothedAnglesRef.current[currentId]);
       smoothedAnglesRef.current[currentId] = currentAngle;
       
-      console.log(`[DEBUG] EX: ${config?.name || currentId} | Açı: ${currentAngle}° | State: ${motionStateRef.current} | Mode: ${config?.mode}`);
+      //console.log(`[DEBUG] EX: ${config?.name || currentId} | Açı: ${currentAngle}° | State: ${motionStateRef.current} | Mode: ${config?.mode}`);
       if (config.mode === 'reps') {
         const isClosing = config.repConfig.startThreshold > config.repConfig.midThreshold;
         
@@ -233,5 +233,5 @@ export const usePoseProcessor = (exerciseId, currentIndex, screenAspectRatio) =>
     };
   }, []);
 
-  return { reps, seconds, motionState, feedback, appState, restCountdown, processFrame, stopProcessor };
+  return { reps, seconds, motionState, feedback, appState, appStateRef, restCountdown, processFrame, stopProcessor };
 };

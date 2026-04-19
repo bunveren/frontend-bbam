@@ -71,8 +71,8 @@ const WorkoutDetailsScreen = ({ route, navigation }) => {
   }, [reminders, planId]);
 
   const handleStartWorkout = async () => {
-    const { id: sessionId } = await createSession(planId, new Date());
-    navigation.navigate("LiveSession", { exerciseList, sessionId });
+    const { id: sessionId } = await createSession(planId, workoutPlan.name, new Date());
+    navigation.navigate("LiveSession", { exerciseList, sessionId, planName: workoutPlan.name });
   };
 
   const handleEditWorkout = () => {
