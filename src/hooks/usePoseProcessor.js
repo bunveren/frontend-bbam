@@ -203,7 +203,7 @@ export const usePoseProcessor = (exerciseId, currentIndex, screenAspectRatio) =>
           } else if (currentState === 2 && atStart) {
             setReps(prev => {
               const newCount = prev + 1;
-              feedbackProvider.triggerVoiceOutput(`${newCount}`);
+              feedbackProvider.triggerVoiceOutput(`${newCount}`, 'COUNT');
               return newCount;
             });
             motionStateRef.current = 1; setMotionState(1);
