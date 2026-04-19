@@ -30,9 +30,8 @@ const HomeScreen = ({ navigation }) => {
     const filteredSessions = sessions.filter(s => s.status === 'completed');
     const count = filteredSessions.length;
     const totalMinutes = filteredSessions.reduce((acc, s) => acc + (s.duration_minutes || 0), 0);
-    const hours = (totalMinutes / 60).toFixed(1);
 
-    return { totalWorkouts: count, totalTimeSpent: hours };
+    return { totalWorkouts: count, totalTimeSpent: totalMinutes };
   }, [sessions]);
 
   const loadWorkoutPlans = async () => {
@@ -102,7 +101,7 @@ const HomeScreen = ({ navigation }) => {
           </View>
           <View className="flex-1 bg-bbam-back-card p-4 rounded-3xl items-center justify-center h-32">
             <Ionicons name="time" size={24} color="#585AD1" />
-            <Text className="text-m3-title-small font-bold mt-2">{`${stats.totalTimeSpent} Hours`}</Text>
+            <Text className="text-m3-title-small font-bold mt-2">{stats.totalTimeSpent < 60 ? `${stats.totalTimeSpent} Mins` : `${(stats.totalTimeSpent / 60).toFixed(1)} Hours`}</Text>
             <Text className="text-m3-title-small font-bold text-bbam-text-light">Time Spent</Text>
           </View>
         </View>
