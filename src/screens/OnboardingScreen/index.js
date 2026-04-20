@@ -68,24 +68,9 @@ const OnboardingScreen = ({ navigation }) => {
 
   // ===== UI HELPERS =====
   const Divider = () => (
-    <View className="flex-row items-center my-8">
+    <View className="flex-row items-center mt-8 mb-6">
       <View className="flex-1 h-[1px] bg-gray-300" />
-      <Text className="mx-3 text-bbam-text-light m3-body-small">
-        Or continue with
-      </Text>
       <View className="flex-1 h-[1px] bg-gray-300" />
-    </View>
-  );
-
-  const GoogleButton = () => (
-    <View className="items-center">
-      <TouchableOpacity
-        activeOpacity={0.85}
-        className="w-14 h-14 rounded-full items-center justify-center bg-red-500"
-        onPress={() => {}}
-      >
-        <Text className="text-white font-bold text-lg">G</Text>
-      </TouchableOpacity>
     </View>
   );
 
@@ -348,9 +333,8 @@ const OnboardingScreen = ({ navigation }) => {
               </View>
 
               <Divider />
-              <GoogleButton />
 
-              <View className="flex-row justify-center mt-8">
+              <View className="flex-row justify-center mt-24">
                 <Text className="text-bbam-text-light">
                   Don’t have an account?{" "}
                 </Text>
@@ -470,9 +454,8 @@ const OnboardingScreen = ({ navigation }) => {
               </View>
 
               <Divider />
-              <GoogleButton />
 
-              <View className="flex-row justify-center mt-8">
+              <View className="flex-row justify-center mt-20">
                 <Text className="text-bbam-text-light">
                   Already have an account?{" "}
                 </Text>
