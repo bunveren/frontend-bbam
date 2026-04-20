@@ -43,15 +43,6 @@ const LiveSessionScreen = ({ navigation, route }) => {
     isCorrectSV.value = feedback === "Looking good!" || feedback === "Perfect!";
   }, [feedback]);
 
-  useEffect(() => {
-    if (exerciseList.length > 0) {
-      console.log("--- EXERCISE DATA DEBUG ---");
-      console.log("Full Object:", JSON.stringify(exerciseList[0], null, 2));
-      console.log("Keys available:", Object.keys(exerciseList[0]));
-    } else {
-      console.log("Exercise list is empty!");
-    }
-  }, [exerciseList]);
 
   const handleLandmarks = (data) => {
     if (isSessionEndedRef.current) return;
@@ -64,7 +55,7 @@ const LiveSessionScreen = ({ navigation, route }) => {
       const result = processFrame(internalLandmarks);
 
       // collect stats for current exercise
-      console.log({app: appStateRef.current, result});
+      //console.log({app: appStateRef.current, result});
       if (appStateRef.current === 'WORKOUT' && result?.evaluation) {
         const { isCorrect, message, errorType } = result.evaluation;
         
@@ -74,7 +65,7 @@ const LiveSessionScreen = ({ navigation, route }) => {
         } else if (message && message !== "Looking good!" && message !== "Perfect!") {
           statsRef.current.currentStats.errors.add(message);
         }
-        console.log({totalFrames: statsRef.current.currentStats.totalFrames, correctFrames: statsRef.current.currentStats.correctFrames});
+        //console.log({totalFrames: statsRef.current.currentStats.totalFrames, correctFrames: statsRef.current.currentStats.correctFrames});
       }
     }
   };
@@ -142,7 +133,7 @@ const LiveSessionScreen = ({ navigation, route }) => {
       stopProcessor();
 
       try {
-        console.log({ errors: finalPayload.exercises[0]?.common_errors,finalStats: finalPayload.exercises, duration: finalPayload.duration_minutes });
+        //console.log({ errors: finalPayload.exercises[0]?.common_errors,finalStats: finalPayload.exercises, duration: finalPayload.duration_minutes });
         await endSession(sessionId, finalPayload);
       } catch (e) {
         console.error("Failed to save session results:", e);
@@ -213,14 +204,6 @@ const LiveSessionScreen = ({ navigation, route }) => {
             </TouchableOpacity>
             <TouchableOpacity onPress={() => switchCamera()} className="bg-white/20 p-3 rounded-full">
               <Ionicons name="camera-reverse-outline" size={28} color="white"></Ionicons>
-            </TouchableOpacity>
-          </View>
-
-          <View className="absolute top-12 right-6 z-50" style={{ zIndex: 999, elevation: 10 }}>
-            <TouchableOpacity 
-              onPress={handleNextExercise} 
-              className="bg-red-600 px-4 py-3 rounded-full">
-              <Text className="text-white font-bold">Skip (Debug)</Text>
             </TouchableOpacity>
           </View>
 

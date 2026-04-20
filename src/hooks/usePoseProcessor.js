@@ -60,11 +60,7 @@ export const usePoseProcessor = (exerciseId, currentIndex, screenAspectRatio) =>
   }, []);
 
   useEffect(() => {
-    if (exerciseLibrary) {
-      libRef.current = exerciseLibrary;
-      console.log("Kütüphane senkronize edildi. Mevcut Anahtarlar:", Object.keys(exerciseLibrary));
-      console.log("Aranan Exercise ID:", exerciseId);
-    }
+    if (exerciseLibrary) libRef.current = exerciseLibrary;
   }, [exerciseLibrary]);
 
   useEffect(() => {
@@ -125,12 +121,7 @@ export const usePoseProcessor = (exerciseId, currentIndex, screenAspectRatio) =>
         config = libRef.current.find(ex => ex.id == currentId || ex._id == currentId);
     }
 
-    if (!config || (!config.repConfig && !config.holdConfig)) {
-        if (Math.random() < 0.05) {
-             console.warn(`Egzersiz bulunamadı! Aranan ID: ${currentId}`);
-        }
-        return; 
-    }
+    if (!config || (!config.repConfig && !config.holdConfig)) return;
     
     const aspectRatio = screenAspectRatio || fallbackRatio;
     //console.log(`EX: ${exerciseId} | Mode: ${config.mode} | Angle: ${currentAngle} | Correct: ${evaluation.isCorrect} | State: ${motionStateRef.current}`);
