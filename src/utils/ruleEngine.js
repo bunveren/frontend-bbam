@@ -16,7 +16,7 @@ export const evaluateForm = (landmarks, currentExercise, aspectRatio = 1, forced
   const config = currentExercise.repConfig || currentExercise.holdConfig;
   
   if (!config || !config.primaryJoints) {
-    console.debug("config not sent");
+    //console.debug("config not sent");
     return feedback; 
   }
   const criticalJoints = config.primaryJoints;

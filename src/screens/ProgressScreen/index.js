@@ -377,9 +377,21 @@ const SessionDetail = ({ session, onBack }) => {
           </View>
 
           {session?.summary_json?.ai_summary ? (
-            <Text style={{ fontSize: 15, color: "#fff", lineHeight: 23, opacity: 0.95 }}>
-              {session?.summary_json?.ai_summary}
-            </Text>
+            <View style={{ maxHeight: 200 }}>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Text 
+                  style={{ 
+                    fontSize: 15, 
+                    color: "#fff", 
+                    lineHeight: 23, 
+                    opacity: 0.95,
+                    textAlign: "left" 
+                  }}
+                >
+                  {session?.summary_json?.ai_summary}
+                </Text>
+              </ScrollView>
+            </View>
           ) : (
             <Text style={{ fontSize: 14, color: "rgba(255,255,255,0.65)", lineHeight: 20 }}>
               Could not load feedback for this session.
